@@ -1,14 +1,10 @@
-"""Verdrahtung aller Komponenten + Dauerbetrieb (Scheduler)."""
+"""Verdrahtung aller Komponenten."""
 
 from __future__ import annotations
 
 import logging
-import random
-import threading
-import time
 from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from .config import AppConfig
 from .notifiers import Notification, NotificationHub, create_hub
@@ -89,34 +85,3 @@ class App:
         if (now_local.hour, now_local.minute) < (hh, mm):
             return False
         return self.storage.get_meta("last_report_date") != now_local.date().isoformat()
-
-    def run_forever(self, stop: threading.Event | None = None) -> None:
-        stop = stop or threading.Event()
-        tz = ZoneInfo(self.cfg.general.timezone)
-        interval = self.cfg.general.interval_minutes * 60
-        next_check = time.monotonic()
-        log.info(
-            "Tracker läuft: %d Karten, Intervall %.0f min, Bericht täglich um %s",
-            len(self.cfg.cards),
-            self.cfg.general.interval_minutes,
-            self.cfg.reports.daily_time or "–",
-        )
-        while not stop.is_set():
-            if time.monotonic() >= next_check:
-                try:
-                    self.run_check()
-                except Exception:  # noqa: BLE001
-                    log.exception("Unerwarteter Fehler bei der Prüfung")
-                jitter = random.uniform(0, self.cfg.general.jitter_seconds)
-                next_check = time.monotonic() + interval + jitter
-
-            now_local = datetime.now(tz)
-            if self._report_due(now_local):
-                try:
-                    self.run_report()
-                except Exception:  # noqa: BLE001
-                    log.exception("Bericht konnte nicht erstellt werden")
-                self.storage.set_meta("last_report_date", now_local.date().isoformat())
-
-            stop.wait(max(1.0, min(30.0, next_check - time.monotonic())))
-        log.info("Tracker beendet.")

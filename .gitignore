@@ -9,4 +9,6 @@ build/
 .ruff_cache/
 .env
 config.yaml
+config.yaml.bak
+/config/
 data/

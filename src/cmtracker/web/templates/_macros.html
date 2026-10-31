@@ -1,0 +1,17 @@
+{% macro change(v) -%}
+<span class="{{ 'down' if v is not none and v < 0 else ('up' if v is not none and v > 0 else 'muted') }}">{{ v|pct }}</span>
+{%- endmacro %}
+
+{% macro state_badge(state) -%}
+{% set labels = {'ok': 'aktiv', 'hit': 'Ziel erreicht', 'error': 'Fehler', 'new': 'neu', 'paused': 'pausiert'} %}
+<span class="badge {{ state }}">{{ labels[state] }}</span>
+{%- endmacro %}
+
+{% macro purchase_badge(status) -%}
+{% set labels = {'simulated': 'simuliert', 'in_cart': 'im Warenkorb', 'ordered': 'gekauft', 'failed': 'fehlgeschlagen'} %}
+<span class="badge {{ status }}">{{ labels.get(status, status) }}</span>
+{%- endmacro %}
+
+{% macro extras(o) -%}
+{{ [o.foil and 'Foil', o.signed and 'signiert', o.altered and 'altered', o.first_edition and '1. Ed.']|select|join(', ') or '–' }}
+{%- endmacro %}

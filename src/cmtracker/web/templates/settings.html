@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "_fields.html" import filter_fields, alert_fields, env_badge %}
+{% block title %}Einstellungen{% endblock %}
+
+{% macro text(section, name, label, value, hint='', type='text', placeholder='') -%}
+{% set is_env = name in env_fields[section] %}
+<div class="field"><label>{{ label }} {{ env_badge(is_env) }}</label>
+  <input type="{{ type }}" name="{{ name }}" value="{{ value if value is not none else '' }}" placeholder="{{ placeholder }}" {{ 'disabled' if is_env }}>
+  {% if hint %}<div class="hint">{{ hint }}</div>{% endif %}</div>
+{%- endmacro %}
+
+{% macro checkbox(section, name, label, value) -%}
+{% set is_env = name in env_fields[section] %}
+<div class="field">{% if not is_env %}<input type="hidden" name="{{ name }}" value="0">{% endif %}
+  <label class="check"><input type="checkbox" name="{{ name }}" value="1" {{ 'checked' if value }} {{ 'disabled' if is_env }}> {{ label }} {{ env_badge(is_env) }}</label></div>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head"><h1>Einstellungen</h1></div>
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+<p class="muted small">Änderungen werden in <code>config.yaml</code> gespeichert (vorherige Version als <code>config.yaml.bak</code>) und sofort übernommen.
+  Felder mit <span class="env-badge">${ENV}</span> kommen aus Umgebungsvariablen und lassen sich nur dort ändern.</p>
+
+<section class="box" id="defaults">
+  <h2>Standardwerte für alle Karten</h2>
+  <p class="muted small">Gelten für jede Karte, sofern dort nichts Eigenes eingestellt ist.</p>
+  <form method="post" action="/settings/defaults">
+    <fieldset><legend>Preisalarme</legend>{{ alert_fields('da_', da, false) }}</fieldset>
+    <fieldset><legend>Filter</legend>{{ filter_fields('df_', df, false) }}</fieldset>
+    <button class="btn primary">Standardwerte speichern</button>
+  </form>
+</section>
+
+<section class="box" id="general">
+  <h2>Prüfung</h2>
+  <form method="post" action="/settings/general">
+    <div class="fields">
+      {{ text('general', 'interval_minutes', 'Intervall (Minuten)', '%g'|format(cfg.general.interval_minutes), 'Wie oft alle Karten geprüft werden. API-Limits beachten!', 'number') }}
+      {{ text('general', 'jitter_seconds', 'Zufällige Verzögerung (s)', '%g'|format(cfg.general.jitter_seconds), 'Damit Abrufe nicht exakt getaktet sind', 'number') }}
+      {{ text('general', 'timezone', 'Zeitzone', cfg.general.timezone, 'z.B. Europe/Berlin') }}
+      {{ text('general', 'keep_offers', 'Gespeicherte Angebote je Prüfung', cfg.general.keep_offers, 'Die X günstigsten passenden Angebote', 'number') }}
+      <div class="field"><label>Log-Level {{ env_badge('log_level' in env_fields.general) }}</label>
+        <select name="log_level" {{ 'disabled' if 'log_level' in env_fields.general }}>
+          {% for l in ['DEBUG', 'INFO', 'WARNING', 'ERROR'] %}<option {{ 'selected' if cfg.general.log_level|upper == l }}>{{ l }}</option>{% endfor %}
+        </select><div class="hint">wirkt nach Neustart</div></div>
+    </div>
+    {{ checkbox('general', 'notify_errors', 'Fehler (z.B. API nicht erreichbar) auch per Nachricht melden', cfg.general.notify_errors) }}
+    <button class="btn primary">Speichern</button>
+  </form>
+</section>
+
+<section class="box" id="provider">
+  <h2>Datenquelle</h2>
+  <form method="post" action="/settings/provider">
+    <div class="fields">
+      <div class="field"><label>Provider {{ env_badge('type' in env_fields.provider) }}</label>
+        <select name="type" {{ 'disabled' if 'type' in env_fields.provider }}>
+          {% for t, l in [('demo', 'Demo (simulierte Daten)'), ('mkm_api', 'Cardmarket-API (empfohlen)'), ('scraper', 'Website-Scraper (Notlösung)')] %}
+          <option value="{{ t }}" {{ 'selected' if cfg.provider.type == t }}>{{ l }}</option>{% endfor %}
+        </select>
+        <div class="hint">API-Zugangsdaten werden aus Sicherheitsgründen nur in <code>config.yaml</code>/<code>.env</code> gepflegt.</div></div>
+      <div class="field"><label>Scraper: Sprache der Website</label>
+        <input type="text" name="locale" value="{{ cfg.provider.scraper.locale }}" {{ 'disabled' if 'locale' in env_fields.scraper }}></div>
+      <div class="field"><label>Scraper: Pause zwischen Abrufen (s)</label>
+        <input type="number" name="request_delay_seconds" value="{{ '%g'|format(cfg.provider.scraper.request_delay_seconds) }}" step="0.5" {{ 'disabled' if 'request_delay_seconds' in env_fields.scraper }}></div>
+    </div>
+    <p class="small muted">API-Status: {% if cfg.provider.mkm_api %}Zugangsdaten hinterlegt ✔{% else %}keine Zugangsdaten hinterlegt{% endif %}</p>
+    <button class="btn primary">Speichern</button>
+  </form>
+</section>
+
+<section class="box" id="reports">
+  <h2>Bericht</h2>
+  <form method="post" action="/settings/reports">
+    <div class="fields">
+      {{ text('reports', 'daily_time', 'Täglich um', cfg.reports.daily_time, 'HH:MM, leer = kein automatischer Bericht', 'text', '08:00') }}
+      {{ text('reports', 'history_days', 'Zeitraum (Tage)', cfg.reports.history_days, '', 'number') }}
+      {{ text('reports', 'top_offers', 'Angebote je Karte', cfg.reports.top_offers, '', 'number') }}
+      {{ text('reports', 'public_url', 'Öffentliche Adresse', cfg.reports.public_url, 'Optional: unter dieser URL ist die Oberfläche erreichbar (wird in Nachrichten verlinkt)', 'url', 'https://tracker.example.com/reports') }}
+    </div>
+    {{ checkbox('reports', 'send_summary', 'Zusammenfassung per Nachricht verschicken', cfg.reports.send_summary) }}
+    {{ checkbox('reports', 'attach_html', 'HTML-Bericht als Anhang mitschicken', cfg.reports.attach_html) }}
+    <button class="btn primary">Speichern</button>
+  </form>
+</section>
+
+<section class="box" id="purchasing">
+  <h2>Auto-Kauf <span class="badge simulated">experimentell</span></h2>
+  <p class="small muted">Gekauft wird nur bei Karten mit aktiviertem Auto-Kauf, unter deren Max. Kaufpreis und innerhalb der Budgets. Versandkosten werden nicht berücksichtigt.</p>
+  <form method="post" action="/settings/purchasing" data-confirm="Auto-Kauf-Einstellungen wirklich speichern?">
+    {{ checkbox('purchasing', 'enabled', 'Auto-Kauf aktivieren', cfg.purchasing.enabled) }}
+    <div class="fields">
+      <div class="field"><label>Modus {{ env_badge('mode' in env_fields.purchasing) }}</label>
+        <select name="mode" {{ 'disabled' if 'mode' in env_fields.purchasing }}>
+          <option value="dry_run" {{ 'selected' if cfg.purchasing.mode == 'dry_run' }}>Probelauf – nur melden</option>
+          <option value="cart" {{ 'selected' if cfg.purchasing.mode == 'cart' }}>In den Warenkorb legen (nur API)</option>
+        </select><div class="hint">Bezahlt wird immer manuell auf cardmarket.com</div></div>
+      {{ text('purchasing', 'max_per_run', 'Budget pro Prüfung (€)', cfg.purchasing.max_per_run, '', 'number') }}
+      {{ text('purchasing', 'max_per_month', 'Budget pro Monat (€)', cfg.purchasing.max_per_month, '', 'number') }}
+    </div>
+    <button class="btn primary">Speichern</button>
+  </form>
+</section>
+{% endblock %}

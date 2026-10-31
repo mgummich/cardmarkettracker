@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Dashboard{% endblock %} · Cardmarket Tracker</title>
+<link rel="stylesheet" href="{{ url_for('static', path='style.css') }}?v={{ version }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='sans-serif'>€</text></svg>">
+</head>
+<body>
+<header class="top"><div class="inner">
+  <a class="brand" href="/"><span class="logo">€</span>Cardmarket Tracker</a>
+  <nav>
+    <a href="/" class="{{ 'active' if nav in ('dashboard', 'card_detail') }}">Dashboard</a>
+    <a href="/activity" class="{{ 'active' if nav == 'activity' }}">Aktivität</a>
+    <a href="/settings" class="{{ 'active' if nav == 'settings' }}">Einstellungen</a>
+    <a href="/system" class="{{ 'active' if nav == 'system' }}">System</a>
+  </nav>
+  <span class="spacer"></span>
+  {% if runner %}
+  {% set busy = runner.running or runner.pending %}
+  <span id="status-pill" class="status-pill{{ ' busy' if busy }}{{ ' off' if not runner.scheduling }}">
+    <span class="dot"></span><span class="text">
+      {% if busy %}{{ runner.current_task or 'Auftrag wartet…' }}
+      {% elif runner.scheduling %}nächste Prüfung {{ fmt_time(runner.next_check_at, '%H:%M') }}
+      {% else %}Zeitplan aus{% endif %}</span>
+  </span>
+  <form class="inline" method="post" action="/check"><button class="btn small" type="submit">↻ Jetzt prüfen</button></form>
+  {% else %}
+  <span id="status-pill" class="status-pill off"><span class="dot"></span><span class="text">nur Ansicht</span></span>
+  {% endif %}
+</div></header>
+<main>
+  {% if cfg_error %}<div class="flash warn"><strong>config.yaml ist fehlerhaft – es läuft die letzte gültige Version weiter.</strong>
+{{ cfg_error }}</div>{% endif %}
+  {% if msg %}<div class="flash ok">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="flash err">{{ err }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+<footer>Cardmarket Tracker {{ version }} · Provider: {{ cfg.provider.type }} · Preise ohne Versand</footer>
+<script src="{{ url_for('static', path='app.js') }}?v={{ version }}"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "_macros.html" import change, state_badge, purchase_badge %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Dashboard</h1>
+  <div class="actions"><a class="btn primary" href="/cards-new">＋ Karte hinzufügen</a></div>
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="label">Getrackte Karten</div>
+    <div class="value">{{ data.rows|selectattr('card.enabled')|list|length }}</div>
+    <div class="sub">{{ data.rows|length }} insgesamt</div></div>
+  <div class="tile"><div class="label">Zielpreis erreicht</div>
+    <div class="value {{ 'down' if data.hits }}">{{ data.hits }}</div>
+    <div class="sub">Tiefstpreis ≤ Zielpreis</div></div>
+  <div class="tile"><div class="label">Alerts (24 h)</div>
+    <div class="value">{{ data.alerts_24h }}</div>
+    <div class="sub"><a href="/activity">Verlauf ansehen</a></div></div>
+  <div class="tile"><div class="label">Letzte Prüfung</div>
+    <div class="value small" style="font-size:1.05rem">{{ fmt_time(runner.last_check_at) if runner and runner.last_check_at else '–' }}</div>
+    <div class="sub">{% if data.errors %}<span class="up">{{ data.errors }} Karte(n) mit Fehler</span>{% elif runner and runner.last_check_seconds %}Dauer {{ runner.last_check_seconds }} s{% else %}&nbsp;{% endif %}</div></div>
+</div>
+
+<section class="box">
+  {% if data.rows %}
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Karte</th><th>Status</th><th class="num">Tiefstpreis</th><th>7 Tage</th>
+      <th class="num">24 h</th><th class="num">7 T</th><th class="num">vs. Trend</th>
+      <th class="num">Zielpreis</th><th class="num">Allzeit-Tief</th><th class="num">Angebote</th>
+    </tr></thead>
+    <tbody>
+    {% for r in data.rows %}
+      {% set s = r.latest %}
+      <tr class="{{ 'paused' if not r.card.enabled }}">
+        <td><a class="cardname" href="/cards/{{ r.card.key }}">{{ r.card.name }}</a>
+          <div class="muted small">{{ r.card.game }}{% if r.card.buy.enabled %} · 🛒 Auto-Kauf{% endif %}</div></td>
+        <td>{{ state_badge(r.state) }}{% if r.state == 'error' %}<div class="small up" title="{{ r.status.error }}">{{ r.status.error|truncate(40) }}</div>{% endif %}</td>
+        <td class="num"><strong>{{ s.min_price|eur if s else '–' }}</strong></td>
+        <td>{{ r.spark|safe }}</td>
+        <td class="num">{{ change(r.change_24h) }}</td>
+        <td class="num">{{ change(r.change_7d) }}</td>
+        <td class="num">{{ change(r.vs_trend) }}</td>
+        <td class="num">{% if r.target %}{{ r.target|eur }}<div class="small {{ 'down' if r.to_target is not none and r.to_target <= 0 else 'muted' }}">{% if r.to_target is not none %}{{ 'erreicht ✔' if r.to_target <= 0 else (r.to_target|pct(false)) ~ ' darüber' }}{% endif %}</div>{% else %}<span class="muted">–</span>{% endif %}</td>
+        <td class="num">{{ r.all_time_low|eur }}</td>
+        <td class="num">{% if s %}{{ s.offer_count }}<span class="muted"> / {{ s.total_offer_count }}</span>{% else %}–{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="empty">
+    <div class="big">🃏</div>
+    <h2>Noch keine Karten</h2>
+    <p class="muted">Lege deine erste Karte an – Filter und Preisalarme kannst du direkt mit einstellen.</p>
+    <a class="btn primary" href="/cards-new">＋ Karte hinzufügen</a>
+  </div>
+  {% endif %}
+</section>
+
+<div class="grid2">
+  <section class="box">
+    <h2>Letzte Alerts</h2>
+    {% if data.alerts %}
+    <table><tbody>
+      {% for a in data.alerts %}
+      <tr><td class="nowrap muted small">{{ fmt_time(a.sent_at, '%d.%m. %H:%M') }}</td>
+        <td><a href="/cards/{{ a.card_key }}">{{ (data.rows|selectattr('card.key', 'equalto', a.card_key)|map(attribute='card.name')|first) or a.card_key }}</a>
+          <div class="small muted">{{ a.message }}</div></td>
+        <td class="num">{{ a.price|eur }}</td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted">In den letzten 7 Tagen keine Alerts.</p>{% endif %}
+  </section>
+  <section class="box">
+    <h2>Auto-Kauf</h2>
+    <p class="small">Status: {% if cfg.purchasing.enabled %}<strong>aktiv</strong> ({{ 'Probelauf' if cfg.purchasing.mode == 'dry_run' else 'Warenkorb' }}){% else %}<span class="muted">aus</span>{% endif %}
+      · Budget {{ cfg.purchasing.max_per_run|eur }}/Lauf, {{ cfg.purchasing.max_per_month|eur }}/Monat</p>
+    {% if data.purchases %}
+    <table><tbody>
+      {% for p in data.purchases %}
+      <tr><td class="small">{{ fmt_time(p.created_at, '%d.%m. %H:%M') }}</td><td><a href="/cards/{{ p.card_key }}">{{ (data.rows|selectattr('card.key', 'equalto', p.card_key)|map(attribute='card.name')|first) or p.card_key }}</a></td>
+        <td class="num">{{ p.quantity }}× {{ p.price|eur }}</td><td>{{ purchase_badge(p.status) }}</td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted small">Noch keine (simulierten) Käufe.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -96,8 +96,11 @@ class Storage:
         self.path = str(path)
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.path)
+        # Scheduler und Weboberfläche greifen parallel zu -> WAL + Wartezeit bei Locks
+        self.conn = sqlite3.connect(self.path, timeout=30)
         self.conn.row_factory = sqlite3.Row
+        if self.path != ":memory:":
+            self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
         self.conn.commit()
 
@@ -296,11 +299,34 @@ class Storage:
             for r in rows
         ]
 
+    def delete_card_data(self, card_key: str) -> None:
+        for table in ("snapshots", "alerts", "purchases"):
+            self.conn.execute(f"DELETE FROM {table} WHERE card_key=?", (card_key,))
+        self.conn.execute("DELETE FROM meta WHERE key=?", (f"status:{card_key}",))
+        self.conn.commit()
+
     # ------------------------------------------------------------------ Meta
 
     def get_meta(self, key: str) -> str | None:
         row = self.conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
         return row[0] if row else None
+
+    def set_card_status(self, card_key: str, error: str | None) -> None:
+        self.set_meta(
+            f"status:{card_key}",
+            json.dumps({"checked_at": _ts(utcnow()), "error": error}, ensure_ascii=False),
+        )
+
+    def card_status(self, card_key: str) -> dict | None:
+        raw = self.get_meta(f"status:{card_key}")
+        if not raw:
+            return None
+        data = json.loads(raw)
+        data["checked_at"] = datetime.fromisoformat(data["checked_at"])
+        return data
+
+    def purchases_for(self, card_key: str, limit: int = 50) -> list[PurchaseRecord]:
+        return [p for p in self.purchases(limit=1000) if p.card_key == card_key][:limit]
 
     def set_meta(self, key: str, value: str) -> None:
         self.conn.execute(

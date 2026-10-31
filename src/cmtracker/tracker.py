@@ -63,9 +63,12 @@ class Tracker:
 
     def _check_card_safe(self, card: CardConfig, budget: float) -> tuple[CheckResult, float]:
         try:
-            return self._check_card(card, budget)
+            outcome = self._check_card(card, budget)
+            self.storage.set_card_status(card.key, None)
+            return outcome
         except Exception as exc:  # noqa: BLE001 - eine Karte darf den Lauf nicht abbrechen
             log.error("Fehler bei '%s': %s", card.name, exc)
+            self.storage.set_card_status(card.key, str(exc))
             if self.cfg.general.notify_errors:
                 self.hub.send(
                     Notification(f"Fehler bei {card.name}", str(exc), event="error", url=card.url)

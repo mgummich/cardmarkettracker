@@ -52,7 +52,7 @@ class Report:
     alerts_total: int
 
 
-def _summarize_filters(cfg: AppConfig, card: CardConfig) -> str:
+def summarize_filters(cfg: AppConfig, card: CardConfig) -> str:
     f = cfg.card_filters(card)
     parts = []
     if f.languages:
@@ -79,7 +79,7 @@ def _summarize_filters(cfg: AppConfig, card: CardConfig) -> str:
     return " · ".join(parts) or "keine Filter"
 
 
-def _summarize_alerts(cfg: AppConfig, card: CardConfig) -> str:
+def summarize_alerts(cfg: AppConfig, card: CardConfig) -> str:
     r = cfg.card_alerts(card)
     if not r.enabled:
         return "Alerts deaktiviert"
@@ -130,8 +130,8 @@ def build_report(cfg: AppConfig, storage: Storage, now: datetime | None = None) 
                 window_max=max(prices) if prices else None,
                 window_avg=round(statistics.fmean(prices), 2) if prices else None,
                 alerts=alerts,
-                filter_summary=_summarize_filters(cfg, card),
-                alert_summary=_summarize_alerts(cfg, card),
+                filter_summary=summarize_filters(cfg, card),
+                alert_summary=summarize_alerts(cfg, card),
                 chart_svg=line_chart(
                     {
                         "Tiefstpreis (gefiltert)": [(s.taken_at, s.min_price) for s in history],

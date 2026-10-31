@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import purchase_badge %}
+{% block title %}Aktivität{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Aktivität</h1></div>
+<div class="grid2">
+  <section class="box">
+    <h2>Alerts</h2>
+    {% if alerts %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Zeitpunkt</th><th>Karte</th><th>Grund</th><th class="num">Preis</th></tr></thead>
+      <tbody>
+      {% for a in alerts %}
+        <tr><td class="nowrap small">{{ fmt_time(a.sent_at) }}</td>
+          <td><a href="/cards/{{ a.card_key }}">{{ names.get(a.card_key, a.card_key) }}</a></td>
+          <td class="small">{{ a.message }}</td><td class="num">{{ a.price|eur }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p class="muted">Noch keine Alerts.</p>{% endif %}
+  </section>
+  <section class="box">
+    <h2>Käufe</h2>
+    {% if purchases %}
+    <table>
+      <thead><tr><th>Zeitpunkt</th><th>Karte</th><th class="num">Menge</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for p in purchases %}
+        <tr><td class="small nowrap">{{ fmt_time(p.created_at) }}</td>
+          <td><a href="/cards/{{ p.card_key }}">{{ names.get(p.card_key, p.card_key) }}</a><div class="small muted">{{ p.seller or '' }}</div></td>
+          <td class="num">{{ p.quantity }}× {{ p.price|eur }}</td><td>{{ purchase_badge(p.status) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="muted">Noch keine (simulierten) Käufe.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

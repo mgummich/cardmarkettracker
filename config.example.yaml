@@ -159,3 +159,15 @@ purchasing:
   mode: dry_run
   max_per_run: 50                    # max. Summe pro Prüfdurchlauf (€, ohne Versand)
   max_per_month: 200                 # max. Summe pro Kalendermonat
+
+# ---------------------------------------------------------------------
+# Weboberfläche (Dashboard + Konfiguration im Browser)
+#   Ist ein Passwort gesetzt, fragt der Browser nach Benutzer/Passwort.
+#   Unbedingt setzen, wenn die Oberfläche nicht nur lokal erreichbar ist!
+# ---------------------------------------------------------------------
+web:
+  enabled: true
+  host: 127.0.0.1                    # im Docker-Container automatisch 0.0.0.0
+  port: 8080
+  username: admin
+  password: ${WEB_PASSWORD:-}

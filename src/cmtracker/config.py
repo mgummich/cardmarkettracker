@@ -250,6 +250,17 @@ class GeneralConfig(_Model):
     """Wie viele der günstigsten passenden Angebote pro Prüfung gespeichert werden."""
     notify_errors: bool = False
 
+    @field_validator("timezone")
+    @classmethod
+    def _tz(cls, v: str) -> str:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError(f"unbekannte Zeitzone {v!r} (z.B. Europe/Berlin)") from None
+        return v
+
 
 class DefaultsConfig(_Model):
     filters: OfferFilter = Field(default_factory=OfferFilter)
@@ -283,6 +294,15 @@ class PurchasingConfig(_Model):
     max_per_month: float = Field(default=200, gt=0)
 
 
+class WebConfig(_Model):
+    enabled: bool = True
+    host: str = "127.0.0.1"
+    port: int = Field(default=8080, ge=1, le=65535)
+    username: str | None = None
+    password: str | None = None
+    """Ist ein Passwort gesetzt, ist die Oberfläche per HTTP-Basic-Auth geschützt."""
+
+
 class AppConfig(_Model):
     general: GeneralConfig = Field(default_factory=GeneralConfig)
     provider: ProviderConfig = Field(default_factory=ProviderConfig)
@@ -291,6 +311,7 @@ class AppConfig(_Model):
     notifications: list[NotifierConfig] = Field(default_factory=list)
     reports: ReportConfig = Field(default_factory=ReportConfig)
     purchasing: PurchasingConfig = Field(default_factory=PurchasingConfig)
+    web: WebConfig = Field(default_factory=WebConfig)
 
     @model_validator(mode="after")
     def _check(self) -> AppConfig:

@@ -16,7 +16,15 @@ SERIES_STYLE = {
 }
 
 
-def line_chart(series: dict[str, Series], width: int = 640, height: int = 220) -> str:
+def line_chart(
+    series: dict[str, Series],
+    width: int = 640,
+    height: int = 220,
+    hover_series: str | None = None,
+    reference_line: tuple[str, float] | None = None,
+) -> str:
+    """Liniendiagramm. ``hover_series`` erhält Punkte mit Tooltip, ``reference_line``
+    zeichnet eine waagrechte Linie (z.B. Zielpreis)."""
     points = [(t, v) for s in series.values() for t, v in s if v is not None]
     if len(points) < 2:
         return '<p class="muted">Noch zu wenige Datenpunkte für ein Diagramm.</p>'
@@ -26,6 +34,9 @@ def line_chart(series: dict[str, Series], width: int = 640, height: int = 220) -
     t_max = max(t for t, _ in points).timestamp()
     v_min = min(v for _, v in points)
     v_max = max(v for _, v in points)
+    if reference_line:
+        v_min = min(v_min, reference_line[1])
+        v_max = max(v_max, reference_line[1])
     if v_max == v_min:
         v_min, v_max = v_min * 0.95, v_max * 1.05 or 1
     span_t = (t_max - t_min) or 1
@@ -69,5 +80,40 @@ def line_chart(series: dict[str, Series], width: int = 640, height: int = 220) -
             f' stroke-linejoin="round" stroke-linecap="round"{dash_attr}>'
             f"<title>{escape(name)}</title></polyline>"
         )
+    if reference_line:
+        label, value = reference_line
+        yy = y(value)
+        parts.append(
+            f'<line x1="{pad_l}" x2="{width - pad_r}" y1="{yy:.1f}" y2="{yy:.1f}" class="ref"/>'
+            f'<text x="{width - pad_r - 4}" y="{yy - 5:.1f}" class="ref-label" text-anchor="end">'
+            f"{escape(label)} {escape(eur(value))}</text>"
+        )
+    if hover_series and hover_series in series:
+        for t, v in series[hover_series]:
+            if v is None:
+                continue
+            parts.append(
+                f'<circle cx="{x(t):.1f}" cy="{y(v):.1f}" r="5" class="pt">'
+                f"<title>{t:%d.%m.%Y %H:%M} · {escape(eur(v))}</title></circle>"
+            )
     parts.append("</svg>")
     return "".join(parts)
+
+
+def sparkline(values: list[float | None], width: int = 120, height: int = 32) -> str:
+    pts = [v for v in values if v is not None]
+    if len(pts) < 2:
+        return '<span class="muted">–</span>'
+    lo, hi = min(pts), max(pts)
+    span = (hi - lo) or 1
+    step = (width - 4) / (len(pts) - 1)
+    coords = [(2 + i * step, 2 + (1 - (v - lo) / span) * (height - 4)) for i, v in enumerate(pts)]
+    trend = "down" if pts[-1] < pts[0] else ("up" if pts[-1] > pts[0] else "flat")
+    line = " ".join(f"{cx:.1f},{cy:.1f}" for cx, cy in coords)
+    lx, ly = coords[-1]
+    return (
+        f'<svg viewBox="0 0 {width} {height}" width="{width}" height="{height}" '
+        f'class="spark spark-{trend}" aria-hidden="true">'
+        f'<polyline points="{line}" fill="none" stroke-width="1.6"/>'
+        f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="2.2"/></svg>'
+    )

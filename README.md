@@ -5,38 +5,29 @@ Selbst gehosteter Bot, der die Preise ausgewählter Karten auf [Cardmarket](http
 **Alerts bei Preisunterschreitungen**, einem **ausführlichen HTML-Bericht** und einem
 (experimentellen) **Auto-Kauf**-Modul.
 
-```
-            ┌────────────┐   Angebote +    ┌──────────┐   gefiltert   ┌──────────┐
-config.yaml │ Scheduler  │──Preisübersicht─│ Provider │──────────────▶│ SQLite   │
-   ───────▶ │ (cmtracker │                 │ API/HTML │               │ Verlauf  │
-            │    run)    │                 └──────────┘               └────┬─────┘
-            └─────┬──────┘                                                 │
-                  │        ┌──────────────┐   ┌──────────────────────┐     │
-                  ├───────▶│ Alert-Regeln │──▶│ Telegram / Discord / │◀────┤
-                  │        └──────────────┘   │ ntfy / E-Mail / Hook │     │
-                  │        ┌──────────────┐   └──────────────────────┘     │
-                  ├───────▶│ Auto-Kauf    │  (dry_run | Warenkorb)         │
-                  │        └──────────────┘                                │
-                  └──────▶ täglicher HTML-Bericht mit Diagrammen ◀─────────┘
-```
+![Dashboard](docs/dashboard.png)
 
 ## Funktionen
 
-- **Watchlist per YAML** – beliebig viele Karten, globale Standardfilter, je Karte überschreibbar
+- **Weboberfläche** – Dashboard mit allen Karten (Tiefstpreis, Mini-Verlauf, Änderung 24 h/7 T,
+  Abstand zum Zielpreis, Status), Detailseite je Karte mit interaktivem Preisdiagramm,
+  Angeboten, Alerts und Käufen; Karten, Filter, Alarme, Intervall, Bericht und Auto-Kauf
+  **direkt im Browser konfigurieren** – Änderungen greifen sofort, ohne Neustart
+- **Watchlist** – beliebig viele Karten, globale Standardfilter, je Karte überschreibbar
 - **Filter**: Sprachen, Mindestzustand (MT…PO), Foil, signiert, altered, 1. Edition,
   Verkäuferländer (Whitelist/Blacklist), Verkäufertyp (privat/gewerblich/Powerseller),
   gesperrte Verkäufer, Mindestpreis (gegen Lockangebote)
 - **Alert-Regeln** (kombinierbar):
-  - `max_price` – günstigstes passendes Angebot ≤ Zielpreis
-  - `drop_percent` – Preissturz um X % seit der letzten Prüfung
-  - `below_reference_percent` – X % unter Preistrend / 1-, 7-, 30-Tage-Schnitt / ab-Preis
-  - `all_time_low` – neues Allzeit-Tief in der eigenen Historie
-  - Cooldown gegen Spam – fällt der Preis weiter, wird trotzdem sofort erneut gemeldet
+  - Zielpreis – günstigstes passendes Angebot ≤ Zielpreis
+  - Preissturz um X % seit der letzten Prüfung
+  - X % unter Preistrend / 1-, 7-, 30-Tage-Schnitt / ab-Preis
+  - neues Allzeit-Tief in der eigenen Historie
+  - Wartezeit gegen Spam – fällt der Preis weiter, wird trotzdem sofort erneut gemeldet
 - **Benachrichtigungen**: Telegram, Discord, ntfy, E-Mail (SMTP), generischer Webhook
   (Home Assistant, n8n, …), Konsole – pro Kanal wählbar, welche Ereignisse ankommen
 - **Bericht**: HTML (Darkmode, Verlaufsdiagramm, Kennzahlen 24 h / 7 T / 30 T, Allzeit-Tief,
-  günstigste Angebote, Alert-Historie) – täglich automatisch, optional als Anhang verschickt
-  oder per eingebautem Webserver abrufbar; CSV-Export des Verlaufs
+  günstigste Angebote, Alert-Historie) – täglich automatisch, optional als Anhang verschickt;
+  CSV-Export des Verlaufs, JSON-API für eigene Integrationen
 - **Auto-Kauf (experimentell)**: Probelauf oder „in den Warenkorb legen“ über die API, mit
   Stückzahl-, Preis-, Lauf- und Monatsbudget-Grenzen
 - **Datenquellen**: offizielle Cardmarket-API, HTML-Scraper als Fallback, Demo-Modus
@@ -49,17 +40,20 @@ config.yaml │ Scheduler  │──Preisübersicht─│ Provider │───�
 ```bash
 git clone https://github.com/mgummich/cardmarkettracker.git
 cd cardmarkettracker
-cp config.example.yaml config.yaml   # Karten, Filter, Alerts eintragen
-cp .env.example .env                 # Tokens/Passwörter eintragen
+cp .env.example .env            # mindestens WEB_PASSWORD setzen!
 docker compose up -d --build
-docker compose logs -f tracker
-
-# optional: Berichte unter http://localhost:8080/latest.html
-docker compose --profile web up -d
 ```
 
-Einzelbefehle im Container: `docker compose run --rm tracker check` (bzw. `report`,
-`validate`, `test-notify`, …).
+Dann **http://localhost:8080** öffnen (Benutzer `admin`, Passwort aus `WEB_PASSWORD`) und
+Karten über „＋ Karte hinzufügen“ anlegen. Beim ersten Start wird `config/config.yaml`
+automatisch angelegt (Demo-Daten). Alternativ vorher die kommentierte Vorlage kopieren:
+`mkdir -p config && cp config.example.yaml config/config.yaml`.
+
+Einzelbefehle im Container: `docker compose exec tracker cmtracker check` (bzw. `report`,
+`validate`, `test-notify`, …). Logs: `docker compose logs -f`.
+
+> Die Ordner `config/` und `data/` müssen für den Container (UID 1000) beschreibbar sein:
+> `mkdir -p config data && sudo chown -R 1000:1000 config data`
 
 ### Ohne Docker
 
@@ -69,19 +63,54 @@ Python ≥ 3.11:
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 cp config.example.yaml config.yaml
-cmtracker validate        # Konfiguration prüfen
-cmtracker check           # einmal prüfen
-cmtracker run             # Dauerbetrieb
+cmtracker run             # Tracker + Weboberfläche auf http://127.0.0.1:8080
 ```
 
 Die Beispielkonfiguration nutzt den **Demo-Provider** mit simulierten Preisen – so kannst du
-Alerts, Berichte und Benachrichtigungen ohne Cardmarket-Zugang ausprobieren.
+Dashboard, Alerts, Berichte und Benachrichtigungen ohne Cardmarket-Zugang ausprobieren.
+
+## Weboberfläche
+
+| | |
+|---|---|
+| ![Kartendetail](docs/card-detail.png) | ![Karte bearbeiten](docs/card-edit.png) |
+
+- **Dashboard** – alle Karten auf einen Blick, letzte Alerts und Käufe, „↻ Jetzt prüfen“
+- **Kartendetail** – Preisverlauf (7 T / 30 T / 90 T / 1 J / alles, Werte per Mouse-over),
+  Zielpreis-Linie, Kennzahlen, günstigste Angebote, Alerts, Käufe; pausieren, prüfen, bearbeiten
+- **Karte anlegen/bearbeiten** – alle Filter und Regeln; „Standard“ übernimmt die
+  Standardwerte, die grau als Platzhalter angezeigt werden
+- **Einstellungen** – Standardfilter und -alarme, Intervall, Datenquelle, Bericht, Auto-Kauf
+- **System** – Status des Hintergrunddienstes, Benachrichtigungskanäle (maskiert) mit
+  Testnachricht, Berichte erzeugen/ansehen, API-Links
+- **Aktivität** – alle Alerts und (simulierten) Käufe
+
+So speichert die Oberfläche:
+
+- Änderungen werden in die `config.yaml` geschrieben – **Kommentare, Reihenfolge und
+  `${ENV}`-Platzhalter bleiben erhalten**. Vor dem Schreiben wird alles geprüft; bei Fehlern
+  bleibt die Datei unverändert. Die vorige Version liegt als `config.yaml.bak` daneben.
+- Felder, deren Wert aus einer Umgebungsvariable kommt, sind gesperrt (Badge `${ENV}`).
+- Geheimnisse (API-Tokens, Bot-Tokens, Passwörter) und Benachrichtigungskanäle werden bewusst
+  **nicht** im Browser bearbeitet, sondern in `config.yaml`/`.env`.
+- Auch Änderungen direkt an der Datei werden automatisch übernommen. Eine fehlerhafte Datei
+  wird gemeldet, und die letzte gültige Konfiguration läuft weiter.
+
+**Sicherheit:** Mit `web.password` (z.B. `${WEB_PASSWORD}`) ist die Oberfläche per
+Benutzer/Passwort geschützt. Formulare akzeptieren nur Anfragen von der eigenen Seite
+(CSRF-Schutz). Ohne Docker lauscht sie standardmäßig nur auf `127.0.0.1`. Willst du sie aus
+dem Internet erreichen, setz ein Passwort und einen Reverse-Proxy mit HTTPS davor (Caddy,
+Traefik, nginx …).
+
+**JSON-API:** `GET /api/cards`, `GET /api/cards/<key>/history?days=30`, `GET /api/status`;
+Dokumentation unter `/api/docs`.
 
 ## Befehle
 
 | Befehl | Beschreibung |
 |---|---|
-| `cmtracker run` | Dauerbetrieb: prüft im Intervall, schickt den Tagesbericht |
+| `cmtracker run [--no-web] [--host H] [--port P]` | Dauerbetrieb: Zeitplan, Tagesbericht und Weboberfläche |
+| `cmtracker web` | nur Weboberfläche (Prüfungen nur per Knopfdruck) |
 | `cmtracker check [--card KEY]` | einmalige Prüfung (aller oder einzelner Karten) |
 | `cmtracker report [--send]` | HTML-Bericht erzeugen (und Zusammenfassung verschicken) |
 | `cmtracker validate` | Konfiguration prüfen, effektive Filter/Regeln je Karte anzeigen |
@@ -89,7 +118,7 @@ Alerts, Berichte und Benachrichtigungen ohne Cardmarket-Zugang ausprobieren.
 | `cmtracker history KEY [--days 30]` | Preisverlauf im Terminal |
 | `cmtracker export KEY -o datei.csv` | Verlauf als CSV |
 | `cmtracker purchases` | (simulierte) Käufe anzeigen |
-| `cmtracker serve [--port 8080]` | Berichtsordner per HTTP ausliefern |
+| `cmtracker serve [--port 8080]` | nur den Berichtsordner per HTTP ausliefern |
 
 Konfigurationsdatei: `-c pfad.yaml` oder Umgebungsvariable `CMTRACKER_CONFIG`.
 
@@ -200,9 +229,11 @@ Aufbau (`src/cmtracker/`):
 | `tracker.py` | Ablauf je Karte: abrufen → filtern → speichern → Alerts → Kauf |
 | `storage.py` | SQLite: Verlauf, gesendete Alerts, Käufe |
 | `notifiers/` | Telegram, Discord, ntfy, E-Mail, Webhook, Konsole |
+| `runtime.py` | Hintergrunddienst: Zeitplan, „Jetzt prüfen“, automatisches Neuladen der Konfiguration |
+| `web/` | Weboberfläche (FastAPI + Jinja2): Dashboard, Formulare, `config.yaml`-Speicher, JSON-API |
 | `reports/` | HTML-Bericht (Jinja2 + SVG-Diagramme), Text-Zusammenfassung, CSV |
 | `purchasing/` | Kaufplanung (Budget/Stückzahl) und Ausführung (Probelauf/Warenkorb) |
-| `app.py`, `cli.py` | Verdrahtung, Scheduler, Kommandozeile |
+| `app.py`, `cli.py` | Verdrahtung, Kommandozeile |
 
 Neue Datenquelle: `PriceProvider` aus `providers/base.py` implementieren und in
 `providers/__init__.py` registrieren. Neuer Kanal: `Notifier` aus `notifiers/base.py`.
@@ -213,7 +244,8 @@ Neue Datenquelle: `PriceProvider` aus `providers/base.py` implementieren und in
 - [ ] Warenkorb-Optimierung (mehrere Karten beim selben Verkäufer bündeln)
 - [ ] Vollautomatischer Checkout (sofern von der API unterstützt), mit Bestätigung per Telegram
 - [ ] Kartensuche per Name statt Produkt-ID (`cmtracker search`)
-- [ ] Web-Oberfläche zum Verwalten der Watchlist
+- [x] Weboberfläche mit Dashboard und Konfiguration
+- [ ] Benachrichtigungskanäle in der Weboberfläche verwalten
 - [ ] Verkäuferbewertung als Filter
 
 ## Haftungsausschluss

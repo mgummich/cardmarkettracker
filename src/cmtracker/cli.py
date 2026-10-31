@@ -84,21 +84,49 @@ def cmd_check(cfg: AppConfig, args: argparse.Namespace) -> int:
     return 1 if results and all(r.error for r in results) else 0
 
 
-def cmd_run(cfg: AppConfig, args: argparse.Namespace) -> int:
-    app = _app(cfg)
-    stop = threading.Event()
+def _serve(cfg: AppConfig, args: argparse.Namespace, schedule: bool) -> int:
+    from .runtime import Runner
 
-    def handle(signum, frame):  # noqa: ARG001
-        log.info("Signal %s empfangen – beende…", signum)
-        stop.set()
+    runner = Runner(args.config, schedule=schedule)
+    web_enabled = cfg.web.enabled and not getattr(args, "no_web", False)
+    host = args.host or cfg.web.host
+    port = args.port or cfg.web.port
+    if web_enabled and host not in ("127.0.0.1", "localhost", "::1") and not cfg.web.password:
+        log.warning("Weboberfläche auf %s ohne Passwort erreichbar – web.password setzen!", host)
+    if not web_enabled:
+        if not schedule:
+            print("✘ Weboberfläche ist deaktiviert (web.enabled: false).", file=sys.stderr)
+            return 2
+        stop = threading.Event()
 
-    signal.signal(signal.SIGTERM, handle)
-    signal.signal(signal.SIGINT, handle)
+        def handle(signum, frame):  # noqa: ARG001
+            log.info("Signal %s empfangen – beende…", signum)
+            stop.set()
+
+        signal.signal(signal.SIGTERM, handle)
+        signal.signal(signal.SIGINT, handle)
+        runner.start()
+        stop.wait()
+        runner.stop()
+        return 0
+
+    from .web import serve
+
+    runner.start()
     try:
-        app.run_forever(stop)
+        serve(args.config, runner, host, port)  # beendet sich bei SIGINT/SIGTERM
     finally:
-        app.close()
+        log.info("Beende Hintergrunddienst…")
+        runner.stop()
     return 0
+
+
+def cmd_run(cfg: AppConfig, args: argparse.Namespace) -> int:
+    return _serve(cfg, args, schedule=True)
+
+
+def cmd_web(cfg: AppConfig, args: argparse.Namespace) -> int:
+    return _serve(cfg, args, schedule=False)
 
 
 def cmd_report(cfg: AppConfig, args: argparse.Namespace) -> int:
@@ -207,7 +235,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("run", help="Dauerbetrieb: regelmäßig prüfen + täglicher Bericht")
+    s = sub.add_parser("run", help="Dauerbetrieb: Zeitplan + Weboberfläche")
+    s.add_argument("--no-web", action="store_true", help="ohne Weboberfläche")
+    s.add_argument("--host", help="Adresse der Weboberfläche (Standard: web.host)")
+    s.add_argument("--port", type=int, help="Port der Weboberfläche (Standard: web.port)")
+    s = sub.add_parser("web", help="Nur Weboberfläche (Prüfungen nur manuell)")
+    s.add_argument("--host", help="Adresse (Standard: web.host)")
+    s.add_argument("--port", type=int, help="Port (Standard: web.port)")
     s = sub.add_parser("check", help="Einmalige Prüfung")
     s.add_argument("--card", action="append", help="Nur diese Karte(n) (Key), mehrfach möglich")
     s = sub.add_parser("report", help="Bericht erzeugen")
@@ -230,6 +264,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 COMMANDS = {
     "run": cmd_run,
+    "web": cmd_web,
     "check": cmd_check,
     "report": cmd_report,
     "validate": cmd_validate,
@@ -243,6 +278,10 @@ COMMANDS = {
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.command in ("run", "web"):
+        from .runtime import ensure_config
+
+        ensure_config(args.config)
     try:
         cfg = load_config(args.config)
     except ConfigError as exc:
