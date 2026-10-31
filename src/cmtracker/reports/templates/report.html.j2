@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cardmarket Tracker – Bericht {{ fmt_time(report.generated_at, "%d.%m.%Y") }}</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --fg: #1d2330; --muted: #6b7280; --line: #e5e7eb;
+    --good: #15803d; --bad: #b91c1c; --c1: #2563eb; --c2: #d97706; --c3: #7c3aed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1218; --card: #171b23; --fg: #e5e7eb; --muted: #9ca3af; --line: #2a303c;
+      --good: #4ade80; --bad: #f87171; --c1: #60a5fa; --c2: #fbbf24; --c3: #a78bfa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         background: var(--bg); color: var(--fg); }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  h2 { margin: 0; font-size: 1.2rem; }
+  a { color: var(--c1); }
+  .muted { color: var(--muted); }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+         padding: 16px 18px; margin-top: 18px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: .85rem; }
+  td.num, th.num { text-align: right; }
+  .down { color: var(--good); } .up { color: var(--bad); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+           gap: 10px; margin: 14px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .stat .label { font-size: .78rem; color: var(--muted); }
+  .stat .value { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chart { width: 100%; height: auto; }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart .axis { fill: var(--muted); font-size: 11px; }
+  .legend span { margin-right: 14px; font-size: .85rem; }
+  .legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle;
+              margin-right: 5px; }
+  .tags { font-size: .85rem; }
+  .head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+          align-items: baseline; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cardmarket Tracker – Bericht</h1>
+  <div class="muted">
+    Erstellt am {{ fmt_time(report.generated_at) }} · Zeitraum: letzte {{ report.window_days }} Tage
+    · {{ report.cards|length }} Karten · {{ report.alerts_total }} Alerts
+  </div>
+
+  <section class="box">
+    <h2>Übersicht</h2>
+    <table>
+      <thead><tr>
+        <th>Karte</th><th class="num">Tiefstpreis</th><th class="num">24 h</th>
+        <th class="num">7 Tage</th><th class="num">30 Tage</th><th class="num">vs. Trend</th>
+        <th class="num">Trend</th><th class="num">Allzeit-Tief</th><th class="num">Angebote</th>
+      </tr></thead>
+      <tbody>
+      {% for cr in report.cards %}
+        {% set s = cr.latest %}
+        <tr>
+          <td><a href="#{{ cr.card.key }}">{{ cr.card.name }}</a></td>
+          {% if s %}
+          <td class="num"><strong>{{ s.min_price|eur }}</strong></td>
+          {% for v in [cr.change_24h, cr.change_7d, cr.change_30d, cr.vs_trend] %}
+          <td class="num {{ 'down' if v is not none and v < 0 else ('up' if v is not none and v > 0 else '') }}">{{ v|pct }}</td>
+          {% endfor %}
+          <td class="num">{{ s.price_guide.trend|eur }}</td>
+          <td class="num">{{ cr.all_time_low|eur }}</td>
+          <td class="num">{{ s.offer_count }} / {{ s.total_offer_count }}</td>
+          {% else %}
+          <td colspan="8" class="muted">noch keine Daten</td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% for cr in report.cards %}
+  {% set s = cr.latest %}
+  <section class="box" id="{{ cr.card.key }}">
+    <div class="head">
+      <h2>{{ cr.card.name }} <span class="muted">· {{ cr.card.game }}</span></h2>
+      {% if s and s.product_url %}<a href="{{ s.product_url }}" target="_blank" rel="noopener">Auf Cardmarket öffnen ↗</a>{% endif %}
+    </div>
+    <div class="tags muted">Filter: {{ cr.filter_summary }}<br>Alerts: {{ cr.alert_summary }}
+      {% if cr.card.buy.enabled %}<br>Auto-Kauf: bis {{ cr.card.buy.max_price|eur }}, {{ cr.card.buy.quantity }} Stück{% endif %}
+      {% if cr.card.notes %}<br>Notiz: {{ cr.card.notes }}{% endif %}
+    </div>
+
+    {% if s %}
+    <div class="stats">
+      <div class="stat"><div class="label">Tiefstpreis jetzt</div><div class="value">{{ s.min_price|eur }}</div></div>
+      <div class="stat"><div class="label">Ø 5 günstigste</div><div class="value">{{ s.avg5_price|eur }}</div></div>
+      <div class="stat"><div class="label">Median</div><div class="value">{{ s.median_price|eur }}</div></div>
+      <div class="stat"><div class="label">Preistrend</div><div class="value">{{ s.price_guide.trend|eur }}</div></div>
+      <div class="stat"><div class="label">Ø 7 / 30 Tage (CM)</div><div class="value">{{ s.price_guide.avg7|eur }} / {{ s.price_guide.avg30|eur }}</div></div>
+      <div class="stat"><div class="label">Min / Max ({{ report.window_days }} T)</div><div class="value">{{ cr.window_min|eur }} / {{ cr.window_max|eur }}</div></div>
+      <div class="stat"><div class="label">Ø ({{ report.window_days }} T)</div><div class="value">{{ cr.window_avg|eur }}</div></div>
+      <div class="stat"><div class="label">Allzeit-Tief</div><div class="value">{{ cr.all_time_low|eur }}</div></div>
+    </div>
+
+    {{ cr.chart_svg|safe }}
+    <div class="legend muted">
+      <span><i style="background:var(--c1)"></i>Tiefstpreis (gefiltert)</span>
+      <span><i style="background:var(--c2)"></i>Preistrend</span>
+      <span><i style="background:var(--c3)"></i>30-Tage-Ø</span>
+    </div>
+
+    <h3>Günstigste passende Angebote <span class="muted">(Stand {{ fmt_time(s.taken_at) }})</span></h3>
+    {% if s.offers %}
+    <table>
+      <thead><tr><th class="num">Preis</th><th>Zustand</th><th>Sprache</th><th>Extras</th>
+        <th>Verkäufer</th><th>Land</th><th class="num">Stk.</th></tr></thead>
+      <tbody>
+      {% for o in s.offers[:top_offers] %}
+        <tr>
+          <td class="num"><strong>{{ o.price|eur }}</strong></td>
+          <td>{{ o.condition or '–' }}</td>
+          <td>{{ o.language|lang }}</td>
+          <td>{{ [o.foil and 'Foil', o.signed and 'signiert', o.altered and 'altered', o.first_edition and '1. Ed.']|select|join(', ') or '–' }}</td>
+          <td>{{ o.seller }}{% if o.seller_type and o.seller_type != 'private' %} <span class="muted">({{ o.seller_type }})</span>{% endif %}</td>
+          <td>{{ o.seller_country|country }}</td>
+          <td class="num">{{ o.quantity }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Aktuell keine Angebote, die den Filtern entsprechen.</p>
+    {% endif %}
+
+    {% if cr.alerts %}
+    <h3>Alerts im Zeitraum</h3>
+    <table>
+      <thead><tr><th>Zeitpunkt</th><th class="num">Preis</th><th>Grund</th></tr></thead>
+      <tbody>
+      {% for a in cr.alerts[:10] %}
+        <tr><td>{{ fmt_time(a.sent_at) }}</td><td class="num">{{ a.price|eur }}</td><td>{{ a.message }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <p class="muted">Für diese Karte liegen noch keine Daten vor.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+
+  <p class="muted" style="margin-top:24px">Preise ohne Versandkosten. Daten: Cardmarket.</p>
+</main>
+</body>
+</html>

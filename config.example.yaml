@@ -1,0 +1,161 @@
+# =====================================================================
+#  Cardmarket Tracker – Beispielkonfiguration
+#  Kopieren nach config.yaml und anpassen.
+#  ${VAR} bzw. ${VAR:-standard} wird durch Umgebungsvariablen ersetzt
+#  (z.B. aus der .env-Datei bei docker compose).
+# =====================================================================
+
+general:
+  interval_minutes: 60        # wie oft geprüft wird
+  jitter_seconds: 120         # zufällige Verzögerung, damit Abrufe nicht exakt getaktet sind
+  database: data/tracker.db
+  timezone: Europe/Berlin
+  log_level: INFO
+  keep_offers: 20             # gespeicherte günstigste Angebote pro Prüfung
+  notify_errors: false        # Fehler (z.B. API down) auch per Nachricht melden
+
+# ---------------------------------------------------------------------
+# Datenquelle
+#   demo     – Fake-Daten zum Ausprobieren (keine Zugangsdaten nötig)
+#   mkm_api  – offizielle Cardmarket-API (empfohlen, braucht API-Zugang)
+#   scraper  – liest die öffentliche Produktseite (unzuverlässig, Bot-Schutz)
+# ---------------------------------------------------------------------
+provider:
+  type: ${CMTRACKER_PROVIDER:-demo}
+
+  # mkm_api:
+  #   app_token: ${MKM_APP_TOKEN}
+  #   app_secret: ${MKM_APP_SECRET}
+  #   access_token: ${MKM_ACCESS_TOKEN}
+  #   access_token_secret: ${MKM_ACCESS_TOKEN_SECRET}
+  #   max_articles: 300
+
+  scraper:
+    locale: de
+    request_delay_seconds: 8
+
+# ---------------------------------------------------------------------
+# Standardwerte für alle Karten (können je Karte überschrieben werden)
+# ---------------------------------------------------------------------
+defaults:
+  filters:
+    languages: [German, English]       # de, en, Deutsch, English, ... oder Sprach-IDs
+    min_condition: EX                  # MT, NM, EX, GD, LP, PL, PO
+    foil: false                        # true / false / null (= egal)
+    signed: false
+    altered: false
+    # seller_countries: [DE, AT]       # nur Verkäufer aus diesen Ländern
+    # exclude_seller_countries: [GB]
+    # seller_types: [private, professional, powerseller]
+    # exclude_sellers: [nervigerHaendler123]
+    # min_price: 0.10                  # offensichtliche Fake-/Lockangebote ignorieren
+  alerts:
+    drop_percent: 10                   # Tiefstpreis fiel ggü. letzter Prüfung um >= 10 %
+    below_reference_percent: 15        # Tiefstpreis liegt >= 15 % unter dem Referenzpreis
+    reference: trend                   # trend | avg1 | avg7 | avg30 | low
+    all_time_low: true                 # neues Allzeit-Tief in der eigenen Historie
+    cooldown_hours: 12                 # gleicher Alarm frühestens wieder nach 12 h (außer Preis fällt weiter)
+
+# ---------------------------------------------------------------------
+# Getrackte Karten
+#   product_id – für mkm_api (Produkt-ID; die IDs/URLs unten sind nur Beispiele!)
+#   url        – für scraper (Produktseite auf cardmarket.com)
+#   key        – optional, eindeutiger Kurzname (Standard: aus dem Namen erzeugt)
+# ---------------------------------------------------------------------
+cards:
+  - name: "The One Ring (LTR)"
+    game: Magic
+    product_id: 710549
+    url: https://www.cardmarket.com/de/Magic/Products/Singles/The-Lord-of-the-Rings-Tales-of-Middle-earth/The-One-Ring
+    alerts:
+      max_price: 45.00                 # Alarm sobald günstigstes passendes Angebot <= 45 €
+    buy:
+      enabled: false                   # Auto-Kauf für diese Karte (zusätzlich global aktivieren!)
+      max_price: 40.00
+      quantity: 1
+      filters:                         # optional strengere Filter nur für den Kauf
+        min_condition: NM
+        seller_countries: [DE, AT]
+
+  - name: "Charizard ex (OBF 223)"
+    key: charizard-obf-223
+    game: Pokemon
+    product_id: 732134
+    url: https://www.cardmarket.com/de/Pokemon/Products/Singles/Obsidian-Flames/Charizard-ex-V1-OBF223
+    filters:
+      languages: [German]              # überschreibt die Standard-Sprachen
+      min_condition: NM
+    alerts:
+      max_price: 25
+      below_reference_percent: 20
+      reference: avg30
+
+  - name: "Sol Ring (Foil)"
+    key: sol-ring-foil
+    product_id: 12345
+    url: https://www.cardmarket.com/de/Magic/Products/Singles/Commander-Masters/Sol-Ring
+    enabled: true
+    filters:
+      foil: true
+      languages: null                  # null = jede Sprache
+    alerts:
+      drop_percent: 20
+
+# ---------------------------------------------------------------------
+# Benachrichtigungen – beliebig viele Kanäle.
+#   events: welche Ereignisse der Kanal bekommt (alert, report, purchase, error)
+# Ohne Einträge wird nur ins Log geschrieben.
+# ---------------------------------------------------------------------
+notifications:
+  - type: console
+
+  # - type: telegram
+  #   bot_token: ${TELEGRAM_BOT_TOKEN}
+  #   chat_id: ${TELEGRAM_CHAT_ID}
+
+  # - type: discord
+  #   webhook_url: ${DISCORD_WEBHOOK_URL}
+  #   events: [alert, purchase, error]
+
+  # - type: ntfy
+  #   server: https://ntfy.sh
+  #   topic: ${NTFY_TOPIC}
+  #   priority: 4
+
+  # - type: email
+  #   host: smtp.example.com
+  #   port: 587
+  #   security: starttls             # starttls | ssl | none
+  #   username: ${SMTP_USER}
+  #   password: ${SMTP_PASSWORD}
+  #   sender: tracker@example.com
+  #   recipients: [ich@example.com]
+  #   events: [report]
+
+  # - type: webhook                  # z.B. Home Assistant, n8n, Node-RED
+  #   url: https://example.com/hook
+  #   headers: { Authorization: "Bearer ${WEBHOOK_TOKEN}" }
+
+# ---------------------------------------------------------------------
+# Berichte
+# ---------------------------------------------------------------------
+reports:
+  output_dir: data/reports
+  daily_time: "08:00"                # null = kein automatischer Tagesbericht
+  history_days: 30
+  top_offers: 5
+  send_summary: true
+  attach_html: true                  # HTML-Bericht an Telegram/Discord/E-Mail anhängen
+  # public_url: https://tracker.example.com   # falls 'cmtracker serve' öffentlich erreichbar ist
+
+# ---------------------------------------------------------------------
+# Auto-Kauf (EXPERIMENTELL)
+#   dry_run – nur simulieren und melden (empfohlen zum Testen)
+#   cart    – über die API in den Warenkorb legen (nur mkm_api);
+#             bezahlt wird weiterhin manuell auf cardmarket.com
+# ---------------------------------------------------------------------
+purchasing:
+  enabled: false
+  mode: dry_run
+  max_per_run: 50                    # max. Summe pro Prüfdurchlauf (€, ohne Versand)
+  max_per_month: 200                 # max. Summe pro Kalendermonat

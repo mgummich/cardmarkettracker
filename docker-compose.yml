@@ -1,0 +1,25 @@
+services:
+  tracker:
+    build: .
+    # oder fertiges Image aus der GitHub Container Registry:
+    # image: ghcr.io/mgummich/cardmarkettracker:latest
+    container_name: cardmarket-tracker
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./data:/srv/data
+
+  # Optional: Berichte im Browser unter http://<host>:8080/latest.html
+  reports:
+    build: .
+    container_name: cardmarket-tracker-reports
+    restart: unless-stopped
+    command: ["serve", "--port", "8080"]
+    env_file: .env
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./data:/srv/data:ro
+    ports:
+      - "8080:8080"
+    profiles: ["web"]
