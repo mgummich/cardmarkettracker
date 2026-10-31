@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..i18n import _
+
 log = logging.getLogger(__name__)
 
 
@@ -46,7 +48,7 @@ class NotificationHub:
                 notifier.send(n)
                 ok += 1
             except Exception as exc:  # noqa: BLE001 - ein kaputter Kanal darf nichts blockieren
-                log.error("Benachrichtigung über %s fehlgeschlagen: %s", notifier.name, exc)
+                log.error(_("Notification via %s failed: %s"), notifier.name, exc)
         return ok
 
     def close(self) -> None:

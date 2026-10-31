@@ -88,7 +88,7 @@ def test_auth_error_is_provider_error():
     from cmtracker.providers import ProviderError
 
     provider = MkmApiProvider(CFG, transport=httpx.MockTransport(lambda r: httpx.Response(401)))
-    with pytest.raises(ProviderError, match="Authentifizierung"):
+    with pytest.raises(ProviderError, match="authentication failed"):
         provider.fetch(CardConfig(name="X", product_id=1), OfferFilter())
 
 

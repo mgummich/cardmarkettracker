@@ -1,10 +1,11 @@
-"""Ausführung von Kaufentscheidungen."""
+"""Executing purchase decisions."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from ..i18n import _
 from .planner import PurchaseDecision
 
 
@@ -25,11 +26,11 @@ class DryRunPurchaser(Purchaser):
     mode = "dry_run"
 
     def execute(self, decision: PurchaseDecision) -> PurchaseResult:
-        return PurchaseResult("simulated", "Probelauf – es wurde nichts gekauft")
+        return PurchaseResult("simulated", _("Dry run – nothing was bought"))
 
 
 class CartPurchaser(Purchaser):
-    """Legt Artikel über die Cardmarket-API in den Warenkorb."""
+    """Adds articles to the Cardmarket shopping cart via the API."""
 
     mode = "cart"
 
@@ -42,5 +43,5 @@ class CartPurchaser(Purchaser):
         except Exception as exc:  # noqa: BLE001
             return PurchaseResult("failed", str(exc))
         return PurchaseResult(
-            "in_cart", "In den Warenkorb gelegt – Bezahlung auf cardmarket.com abschließen"
+            "in_cart", _("Added to cart – complete the payment on cardmarket.com")
         )

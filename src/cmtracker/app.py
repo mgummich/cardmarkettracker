@@ -1,4 +1,4 @@
-"""Verdrahtung aller Komponenten."""
+"""Wiring of all components."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import AppConfig
+from .i18n import _
 from .notifiers import Notification, NotificationHub, create_hub
 from .providers import PriceProvider, create_provider
 from .purchasing import CartPurchaser, DryRunPurchaser, Purchaser
@@ -24,7 +25,7 @@ def create_purchaser(cfg: AppConfig, provider: PriceProvider) -> Purchaser | Non
         from .providers.mkm_api import MkmApiProvider
 
         if not isinstance(provider, MkmApiProvider):
-            raise RuntimeError("purchasing.mode = cart benötigt provider.type = mkm_api")
+            raise RuntimeError(_("purchasing.mode cart only works with provider.type mkm_api"))
         return CartPurchaser(provider.client)
     return DryRunPurchaser()
 
@@ -51,22 +52,22 @@ class App:
         self.storage.close()
 
     def run_check(self, only: list[str] | None = None) -> list[CheckResult]:
-        log.info("Starte Prüfung (%s)…", self.provider.name)
+        log.info(_("Starting check (%s)…"), self.provider.name)
         results = self.tracker.check_all(only)
         errors = sum(1 for r in results if r.error)
         alerts = sum(len(r.alerts_sent) for r in results)
-        log.info("Prüfung fertig: %d Karten, %d Alerts, %d Fehler", len(results), alerts, errors)
+        log.info(_("Check finished: %d cards, %d alerts, %d errors"), len(results), alerts, errors)
         return results
 
     def run_report(self, send: bool = True) -> Path:
         rc = self.cfg.reports
         report = build_report(self.cfg, self.storage)
         path = write_report(report, rc.output_dir, rc.top_offers)
-        log.info("Bericht geschrieben: %s", path)
+        log.info(_("Report written: %s"), path)
         if send and rc.send_summary:
             self.hub.send(
                 Notification(
-                    title="Cardmarket-Bericht",
+                    title=_("Cardmarket report"),
                     body=render_text(report, rc.public_url),
                     event="report",
                     url=f"{rc.public_url.rstrip('/')}/latest.html" if rc.public_url else None,

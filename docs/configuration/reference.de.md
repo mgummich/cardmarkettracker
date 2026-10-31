@@ -30,6 +30,7 @@ Konfigurationsfehler. Felder mit Variablen sind in der Weboberfläche schreibges
 
 | Schlüssel | Standard | Beschreibung |
 |---|---|---|
+| `language` | `en` | `en` oder `de` – Sprache von Benachrichtigungen, Berichten, Kommandozeile und Log. Die Weboberfläche nutzt die Browsersprache bzw. den EN/DE-Umschalter. **Für Deutsch `de` setzen.** |
 | `interval_minutes` | `60` | Minuten zwischen zwei Prüfungen aller Karten (≥ 1) |
 | `jitter_seconds` | `60` | zufällige Zusatzverzögerung pro Intervall, damit Abrufe nicht exakt getaktet sind |
 | `database` | `data/tracker.db` | SQLite-Datei |
@@ -154,6 +155,9 @@ nur im Log.
 | `password` | – | aktiviert HTTP-Basic-Auth – **setzen**, sobald die Oberfläche von anderen Rechnern erreichbar ist |
 
 ## Vollständiges Beispiel
+
+Die Vorlage ist englisch kommentiert. Für deutsche Nachrichten und Berichte
+`general.language: de` setzen.
 
 ```yaml
 --8<-- "config.example.yaml"

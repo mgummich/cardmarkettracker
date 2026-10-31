@@ -1,24 +1,25 @@
 # =====================================================================
-#  Cardmarket Tracker – Beispielkonfiguration
-#  Kopieren nach config.yaml und anpassen.
-#  ${VAR} bzw. ${VAR:-standard} wird durch Umgebungsvariablen ersetzt
-#  (z.B. aus der .env-Datei bei docker compose).
+#  Cardmarket Tracker – example configuration
+#  Copy to config.yaml and adjust. Docs: https://mgummich.github.io/cardmarkettracker/
+#  ${VAR} or ${VAR:-default} is replaced by environment variables
+#  (e.g. from the .env file with docker compose).
 # =====================================================================
 
 general:
-  interval_minutes: 60        # wie oft geprüft wird
-  jitter_seconds: 120         # zufällige Verzögerung, damit Abrufe nicht exakt getaktet sind
+  language: en                # en | de – language of notifications, reports, CLI and log
+  interval_minutes: 60        # how often all cards are checked
+  jitter_seconds: 120         # random extra delay so requests are not perfectly periodic
   database: data/tracker.db
   timezone: Europe/Berlin
   log_level: INFO
-  keep_offers: 20             # gespeicherte günstigste Angebote pro Prüfung
-  notify_errors: false        # Fehler (z.B. API down) auch per Nachricht melden
+  keep_offers: 20             # cheapest matching offers stored per check
+  notify_errors: false        # also send errors (e.g. API down) as notification
 
 # ---------------------------------------------------------------------
-# Datenquelle
-#   demo     – Fake-Daten zum Ausprobieren (keine Zugangsdaten nötig)
-#   mkm_api  – offizielle Cardmarket-API (empfohlen, braucht API-Zugang)
-#   scraper  – liest die öffentliche Produktseite (unzuverlässig, Bot-Schutz)
+# Data source
+#   demo     – simulated data to try things out (no credentials needed)
+#   mkm_api  – official Cardmarket API (recommended, needs API access)
+#   scraper  – reads the public product page (unreliable, bot protection)
 # ---------------------------------------------------------------------
 provider:
   type: ${CMTRACKER_PROVIDER:-demo}
@@ -31,49 +32,49 @@ provider:
   #   max_articles: 300
 
   scraper:
-    locale: de
+    locale: en
     request_delay_seconds: 8
 
 # ---------------------------------------------------------------------
-# Standardwerte für alle Karten (können je Karte überschrieben werden)
+# Defaults for all cards (can be overridden per card)
 # ---------------------------------------------------------------------
 defaults:
   filters:
-    languages: [German, English]       # de, en, Deutsch, English, ... oder Sprach-IDs
+    languages: [German, English]       # en, de, English, Deutsch, ... or language IDs
     min_condition: EX                  # MT, NM, EX, GD, LP, PL, PO
-    foil: false                        # true / false / null (= egal)
+    foil: false                        # true / false / null (= don't care)
     signed: false
     altered: false
-    # seller_countries: [DE, AT]       # nur Verkäufer aus diesen Ländern
+    # seller_countries: [DE, AT]       # only sellers from these countries
     # exclude_seller_countries: [GB]
     # seller_types: [private, professional, powerseller]
-    # exclude_sellers: [nervigerHaendler123]
-    # min_price: 0.10                  # offensichtliche Fake-/Lockangebote ignorieren
+    # exclude_sellers: [annoyingSeller123]
+    # min_price: 0.10                  # ignore obvious fake / bait listings
   alerts:
-    drop_percent: 10                   # Tiefstpreis fiel ggü. letzter Prüfung um >= 10 %
-    below_reference_percent: 15        # Tiefstpreis liegt >= 15 % unter dem Referenzpreis
+    drop_percent: 10                   # low fell by >= 10 % since the last check
+    below_reference_percent: 15        # low is >= 15 % below the reference price
     reference: trend                   # trend | avg1 | avg7 | avg30 | low
-    all_time_low: true                 # neues Allzeit-Tief in der eigenen Historie
-    cooldown_hours: 12                 # gleicher Alarm frühestens wieder nach 12 h (außer Preis fällt weiter)
+    all_time_low: true                 # new all-time low in your own history
+    cooldown_hours: 12                 # same alert again after 12 h at the earliest (unless the price keeps falling)
 
 # ---------------------------------------------------------------------
-# Getrackte Karten
-#   product_id – für mkm_api (Produkt-ID; die IDs/URLs unten sind nur Beispiele!)
-#   url        – für scraper (Produktseite auf cardmarket.com)
-#   key        – optional, eindeutiger Kurzname (Standard: aus dem Namen erzeugt)
+# Tracked cards
+#   product_id – for mkm_api (product ID; the IDs/URLs below are only examples!)
+#   url        – for the scraper (product page on cardmarket.com)
+#   key        – optional unique short name (default: derived from the name)
 # ---------------------------------------------------------------------
 cards:
   - name: "The One Ring (LTR)"
     game: Magic
     product_id: 710549
-    url: https://www.cardmarket.com/de/Magic/Products/Singles/The-Lord-of-the-Rings-Tales-of-Middle-earth/The-One-Ring
+    url: https://www.cardmarket.com/en/Magic/Products/Singles/The-Lord-of-the-Rings-Tales-of-Middle-earth/The-One-Ring
     alerts:
-      max_price: 45.00                 # Alarm sobald günstigstes passendes Angebot <= 45 €
+      max_price: 45.00                 # alert as soon as the cheapest matching offer is <= 45 €
     buy:
-      enabled: false                   # Auto-Kauf für diese Karte (zusätzlich global aktivieren!)
+      enabled: false                   # auto-buy for this card (also enable it globally!)
       max_price: 40.00
       quantity: 1
-      filters:                         # optional strengere Filter nur für den Kauf
+      filters:                         # optional stricter filters for buying only
         min_condition: NM
         seller_countries: [DE, AT]
 
@@ -81,9 +82,9 @@ cards:
     key: charizard-obf-223
     game: Pokemon
     product_id: 732134
-    url: https://www.cardmarket.com/de/Pokemon/Products/Singles/Obsidian-Flames/Charizard-ex-V1-OBF223
+    url: https://www.cardmarket.com/en/Pokemon/Products/Singles/Obsidian-Flames/Charizard-ex-V1-OBF223
     filters:
-      languages: [German]              # überschreibt die Standard-Sprachen
+      languages: [German]              # overrides the default languages
       min_condition: NM
     alerts:
       max_price: 25
@@ -93,18 +94,18 @@ cards:
   - name: "Sol Ring (Foil)"
     key: sol-ring-foil
     product_id: 12345
-    url: https://www.cardmarket.com/de/Magic/Products/Singles/Commander-Masters/Sol-Ring
+    url: https://www.cardmarket.com/en/Magic/Products/Singles/Commander-Masters/Sol-Ring
     enabled: true
     filters:
       foil: true
-      languages: null                  # null = jede Sprache
+      languages: null                  # null = any language
     alerts:
       drop_percent: 20
 
 # ---------------------------------------------------------------------
-# Benachrichtigungen – beliebig viele Kanäle.
-#   events: welche Ereignisse der Kanal bekommt (alert, report, purchase, error)
-# Ohne Einträge wird nur ins Log geschrieben.
+# Notifications – any number of channels.
+#   events: which events a channel receives (alert, report, purchase, error)
+# Without entries, messages only go to the log.
 # ---------------------------------------------------------------------
 notifications:
   - type: console
@@ -129,45 +130,45 @@ notifications:
   #   username: ${SMTP_USER}
   #   password: ${SMTP_PASSWORD}
   #   sender: tracker@example.com
-  #   recipients: [ich@example.com]
+  #   recipients: [me@example.com]
   #   events: [report]
 
-  # - type: webhook                  # z.B. Home Assistant, n8n, Node-RED
+  # - type: webhook                  # e.g. Home Assistant, n8n, Node-RED
   #   url: https://example.com/hook
   #   headers: { Authorization: "Bearer ${WEBHOOK_TOKEN}" }
 
 # ---------------------------------------------------------------------
-# Berichte
+# Reports
 # ---------------------------------------------------------------------
 reports:
   output_dir: data/reports
-  daily_time: "08:00"                # null = kein automatischer Tagesbericht
+  daily_time: "08:00"                # null = no automatic daily report
   history_days: 30
   top_offers: 5
   send_summary: true
-  attach_html: true                  # HTML-Bericht an Telegram/Discord/E-Mail anhängen
-  # public_url: https://tracker.example.com   # falls 'cmtracker serve' öffentlich erreichbar ist
+  attach_html: true                  # attach the HTML report (Telegram/Discord/e-mail)
+  # public_url: https://tracker.example.com/reports   # if the web UI is publicly reachable
 
 # ---------------------------------------------------------------------
-# Auto-Kauf (EXPERIMENTELL)
-#   dry_run – nur simulieren und melden (empfohlen zum Testen)
-#   cart    – über die API in den Warenkorb legen (nur mkm_api);
-#             bezahlt wird weiterhin manuell auf cardmarket.com
+# Auto-buy (EXPERIMENTAL)
+#   dry_run – only simulate and report (recommended for testing)
+#   cart    – add to the Cardmarket cart via the API (mkm_api only);
+#             payment is still done manually on cardmarket.com
 # ---------------------------------------------------------------------
 purchasing:
   enabled: false
   mode: dry_run
-  max_per_run: 50                    # max. Summe pro Prüfdurchlauf (€, ohne Versand)
-  max_per_month: 200                 # max. Summe pro Kalendermonat
+  max_per_run: 50                    # max. total per check (€, without shipping)
+  max_per_month: 200                 # max. total per calendar month
 
 # ---------------------------------------------------------------------
-# Weboberfläche (Dashboard + Konfiguration im Browser)
-#   Ist ein Passwort gesetzt, fragt der Browser nach Benutzer/Passwort.
-#   Unbedingt setzen, wenn die Oberfläche nicht nur lokal erreichbar ist!
+# Web interface (dashboard + configuration in the browser)
+#   If a password is set, the browser asks for user/password.
+#   Always set it when the interface is reachable from other machines!
 # ---------------------------------------------------------------------
 web:
   enabled: true
-  host: 127.0.0.1                    # im Docker-Container automatisch 0.0.0.0
+  host: 127.0.0.1                    # automatically 0.0.0.0 in the Docker container
   port: 8080
   username: admin
   password: ${WEB_PASSWORD:-}

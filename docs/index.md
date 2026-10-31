@@ -10,7 +10,7 @@ Track the cards you want, filter offers exactly the way you buy (language, condi
 seller country, …), get notified the moment a price drops below your target and keep an eye on
 everything in a clean web dashboard.
 
-![Dashboard](assets/screenshots/dashboard.png)
+![Dashboard](assets/screenshots/en/dashboard.png)
 
 ## Features
 

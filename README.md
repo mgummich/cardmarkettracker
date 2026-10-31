@@ -22,10 +22,11 @@ Track the Magic, Pokémon, Yu-Gi-Oh! … cards you want, filter offers exactly t
 get notified when a price drops below your target, and see everything in a web dashboard –
 running on your own server, NAS or Raspberry Pi.
 
-![Dashboard](docs/assets/screenshots/dashboard.png)
+![Dashboard](docs/assets/screenshots/en/dashboard.png)
 
 ## Features
 
+- **English & German** – web UI with EN/DE switch, notifications and reports in your language
 - **Web dashboard** – current low, 7-day sparkline, 24 h / 7 d change, distance to target,
   interactive price charts per card
 - **Configure in the browser** – cards, filters, alerts, schedule, reports, auto-buy; changes
@@ -73,8 +74,7 @@ Full documentation in **English and German**: <https://mgummich.github.io/cardma
 
 The tracker, alerts, reports and web UI are tested and usable. The Cardmarket API and
 scraper integrations are tested against recorded responses; real-world feedback is very
-welcome. Auto-buy is **experimental**. The web interface and messages are currently German –
-an English UI is on the roadmap.
+welcome. Auto-buy is **experimental**.
 
 ## Contributing
 

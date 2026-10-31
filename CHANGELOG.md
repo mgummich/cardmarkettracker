@@ -24,12 +24,21 @@ All notable changes to this project are documented here. The format follows
 - CI for lint, tests, package build, docs build and Docker; multi-arch images on GHCR;
   release workflow; Dependabot.
 - `cmtracker web` command; `run` gained `--no-web`, `--host` and `--port`.
+- English and German user interface: EN/DE switch in the web UI (stored in a cookie,
+  defaults to the browser language); new setting `general.language` for notifications,
+  reports, CLI and log; locale-aware number and date formats; translation catalog with
+  completeness test.
 
 ### Changed
 
 - Docker image runs tracker and web UI on port 8080, uses a writable `/config` volume and
   has a health check.
 - The package version is defined once in `src/cmtracker/__init__.py`.
+- **English is now the default language** (`general.language: en`). Set `language: de` for
+  German notifications and reports.
+- CSV export uses English column names (`taken_at`, `min_price`, …).
+- `config.example.yaml` is commented in English.
+- Chart labels and tooltips use the configured time zone.
 
 ## [0.1.0] – 2026-10-31
 

@@ -30,7 +30,8 @@ Beispiel mit `max_price: 45`, `cooldown_hours: 12`:
 | 11:00 | 43,90 € | **ja** – günstiger als beim letzten Alarm |
 | 21:30 | 44,10 € | **ja** – Wartezeit abgelaufen |
 
-Alle in einer Prüfung ausgelösten Regeln werden zu einer Nachricht zusammengefasst:
+Alle in einer Prüfung ausgelösten Regeln werden zu einer Nachricht zusammengefasst
+(Sprache: `general.language`, hier `de`):
 
 ```text
 Preisalarm: The One Ring (LTR)

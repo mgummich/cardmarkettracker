@@ -26,6 +26,7 @@ from ..constants import (
     normalize_country,
     normalize_language,
 )
+from ..i18n import _
 from ..models import MarketData, Offer, PriceGuide
 from .base import PriceProvider, ProviderError
 
@@ -186,13 +187,13 @@ def parse_product_page(html: str) -> MarketData:
         try:
             offer = _parse_row(row)
         except Exception as exc:  # noqa: BLE001 - einzelne kaputte Zeilen ignorieren
-            log.debug("Zeile nicht lesbar: %s", exc)
+            log.debug("Unreadable row: %s", exc)
             continue
         if offer:
             offers.append(offer)
 
     if not offers and not any((guide.trend, guide.low)) and "cloudflare" in html.lower():
-        raise ProviderError("Cloudflare-Schutzseite erhalten – Scraping derzeit blockiert")
+        raise ProviderError(_("Received a Cloudflare protection page – scraping is blocked"))
 
     return MarketData(offers=offers, price_guide=guide, product_name=name, total_available=total)
 
@@ -252,20 +253,24 @@ class ScraperProvider(PriceProvider):
 
     def fetch(self, card: CardConfig, filters: OfferFilter) -> MarketData:
         if not card.url:
-            raise ProviderError(f"Karte '{card.name}' hat keine url")
+            raise ProviderError(_("Card '{name}' has no url").format(name=card.name))
         url = build_product_url(card.url, filters, self.cfg.locale)
         self._throttle()
         try:
             resp = self._http.get(url)
         except httpx.HTTPError as exc:
-            raise ProviderError(f"Netzwerkfehler: {exc}") from exc
+            raise ProviderError(_("Network error: {error}").format(error=exc)) from exc
         if resp.status_code in (403, 429, 503):
             raise ProviderError(
-                f"cardmarket.com antwortet mit HTTP {resp.status_code} (Bot-Schutz/Rate-Limit). "
-                "Intervall erhöhen oder die offizielle API nutzen."
+                _(
+                    "cardmarket.com responded with HTTP {status} (bot protection / rate limit). "
+                    "Increase the interval or use the official API."
+                ).format(status=resp.status_code)
             )
         if resp.status_code >= 400:
-            raise ProviderError(f"HTTP {resp.status_code} für {url}")
+            raise ProviderError(
+                _("HTTP {status} for {url}").format(status=resp.status_code, url=url)
+            )
         market = parse_product_page(resp.text)
         market.product_url = str(resp.url)
         return market

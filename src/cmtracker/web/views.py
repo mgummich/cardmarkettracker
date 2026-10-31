@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from ..config import AppConfig, CardConfig
 from ..formatting import change_pct
+from ..i18n import _
 from ..models import Snapshot, utcnow
 from ..reports import summarize_alerts, summarize_filters
 from ..reports.charts import line_chart, sparkline
@@ -118,14 +119,15 @@ def build_detail(
     target = cfg.card_alerts(card).max_price
     chart = line_chart(
         {
-            "Tiefstpreis (gefiltert)": [(s.taken_at, s.min_price) for s in shown],
-            "Preistrend": [(s.taken_at, s.price_guide.trend) for s in shown],
-            "30-Tage-Ø": [(s.taken_at, s.price_guide.avg30) for s in shown],
+            "low": [(s.taken_at, s.min_price) for s in shown],
+            "trend": [(s.taken_at, s.price_guide.trend) for s in shown],
+            "avg30": [(s.taken_at, s.price_guide.avg30) for s in shown],
         },
         width=960,
         height=320,
-        hover_series="Tiefstpreis (gefiltert)",
-        reference_line=("Zielpreis", target) if target else None,
+        hover_series="low",
+        tz=cfg.general.timezone,
+        reference_line=(_("Target"), target) if target else None,
     )
     return CardDetail(
         row=row,

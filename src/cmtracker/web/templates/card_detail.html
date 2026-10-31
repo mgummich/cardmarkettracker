@@ -1,63 +1,64 @@
 {% extends "base.html" %}
-{% from "_macros.html" import change, state_badge, purchase_badge, extras %}
+{% from "_macros.html" import change, state_badge, purchase_badge, extras, target_distance %}
 {% block title %}{{ card.name }}{% endblock %}
 {% block content %}
 {% set r = d.row %}{% set s = r.latest %}
+{% set product_url = (s.product_url if s and s.product_url else card.url) %}
 <div class="page-head">
   <div>
     <h1>{{ card.name }} {{ state_badge(r.state) }}</h1>
-    <div class="muted small">{{ card.game }} · Key <code>{{ card.key }}</code>
-      {% if s and s.product_url %} · <a href="{{ s.product_url }}" target="_blank" rel="noopener">Auf Cardmarket öffnen ↗</a>{% elif card.url %} · <a href="{{ card.url }}" target="_blank" rel="noopener">Auf Cardmarket öffnen ↗</a>{% endif %}</div>
+    <div class="muted small">{{ card.game }} · {{ _("Key") }} <code>{{ card.key }}</code>
+      {% if product_url %} · <a href="{{ product_url }}" target="_blank" rel="noopener">{{ _("Open on Cardmarket") }} ↗</a>{% endif %}</div>
   </div>
   <div class="actions">
-    <form class="inline" method="post" action="/cards/{{ card.key }}/check"><button class="btn" {{ 'disabled' if not runner }}>↻ Jetzt prüfen</button></form>
-    <a class="btn" href="/cards/{{ card.key }}/edit">✎ Bearbeiten</a>
-    <form class="inline" method="post" action="/cards/{{ card.key }}/toggle"><button class="btn">{{ '⏸ Pausieren' if card.enabled else '▶ Fortsetzen' }}</button></form>
+    <form class="inline" method="post" action="/cards/{{ card.key }}/check"><button class="btn" {{ 'disabled' if not runner }}>↻ {{ _("Check now") }}</button></form>
+    <a class="btn" href="/cards/{{ card.key }}/edit">✎ {{ _("Edit") }}</a>
+    <form class="inline" method="post" action="/cards/{{ card.key }}/toggle"><button class="btn">{{ '⏸ ' ~ _('Pause') if card.enabled else '▶ ' ~ _('Resume') }}</button></form>
   </div>
 </div>
 
 {% if r.status and r.status.error %}
-<div class="flash err">Letzte Prüfung ({{ fmt_time(r.status.checked_at) }}) fehlgeschlagen: {{ r.status.error }}</div>
+<div class="flash err">{{ _("Last check ({date}) failed: {error}").format(date=fmt_time(r.status.checked_at), error=r.status.error) }}</div>
 {% endif %}
 
 <div class="tiles">
-  <div class="tile"><div class="label">Tiefstpreis jetzt</div><div class="value">{{ s.min_price|eur if s else '–' }}</div>
-    <div class="sub">24 h {{ change(r.change_24h) }} · 7 T {{ change(r.change_7d) }}</div></div>
-  <div class="tile"><div class="label">Preistrend (Cardmarket)</div><div class="value">{{ s.price_guide.trend|eur if s else '–' }}</div>
-    <div class="sub">Tiefstpreis {{ change(r.vs_trend) }} vs. Trend</div></div>
-  <div class="tile"><div class="label">Zielpreis</div><div class="value">{{ r.target|eur }}</div>
-    <div class="sub">{% if r.to_target is not none %}{{ 'erreicht ✔' if r.to_target <= 0 else (r.to_target|pct(false)) ~ ' darüber' }}{% else %}kein Zielpreis gesetzt{% endif %}</div></div>
-  <div class="tile"><div class="label">Allzeit-Tief</div><div class="value">{{ r.all_time_low|eur }}</div>
-    <div class="sub">seit Beginn des Trackings</div></div>
-  <div class="tile"><div class="label">Ø 5 günstigste · Median</div><div class="value" style="font-size:1.1rem">{{ s.avg5_price|eur if s else '–' }} · {{ s.median_price|eur if s else '–' }}</div>
-    <div class="sub">{{ s.offer_count if s else 0 }} passende von {{ s.total_offer_count if s else 0 }} Angeboten</div></div>
+  <div class="tile"><div class="label">{{ _("Low now") }}</div><div class="value">{{ s.min_price|eur if s else '–' }}</div>
+    <div class="sub">24 h {{ change(r.change_24h) }} · {{ _("7 d") }} {{ change(r.change_7d) }}</div></div>
+  <div class="tile"><div class="label">{{ _("Price trend (Cardmarket)") }}</div><div class="value">{{ s.price_guide.trend|eur if s else '–' }}</div>
+    <div class="sub">{{ _("Low vs. trend") }}: {{ change(r.vs_trend) }}</div></div>
+  <div class="tile"><div class="label">{{ _("Target price") }}</div><div class="value">{{ r.target|eur }}</div>
+    <div class="sub">{% if r.to_target is not none %}{{ target_distance(r) }}{% else %}{{ _("no target price set") }}{% endif %}</div></div>
+  <div class="tile"><div class="label">{{ _("All-time low") }}</div><div class="value">{{ r.all_time_low|eur }}</div>
+    <div class="sub">{{ _("since tracking started") }}</div></div>
+  <div class="tile"><div class="label">{{ _("Avg. of 5 cheapest · median") }}</div><div class="value" style="font-size:1.1rem">{{ s.avg5_price|eur if s else '–' }} · {{ s.median_price|eur if s else '–' }}</div>
+    <div class="sub">{{ _("{matching} matching of {total} offers").format(matching=s.offer_count if s else 0, total=s.total_offer_count if s else 0) }}</div></div>
 </div>
 
 <section class="box">
   <div class="page-head" style="margin-bottom:8px">
-    <h2 style="margin:0">Preisverlauf</h2>
+    <h2 style="margin:0">{{ _("Price history") }}</h2>
     <div class="segmented">
-      {% for label, key in [('7 T', '7'), ('30 T', '30'), ('90 T', '90'), ('1 J', '365'), ('Alles', 'all')] %}
+      {% for label, key in [(_('7 d'), '7'), (_('30 d'), '30'), (_('90 d'), '90'), (_('1 y'), '365'), (_('All'), 'all')] %}
       <a href="?range={{ key }}" class="{{ 'active' if range == key }}">{{ label }}</a>
       {% endfor %}
     </div>
   </div>
   {{ d.chart|safe }}
   <div class="legend">
-    <span><i style="background:var(--c1)"></i>Tiefstpreis (deine Filter)</span>
-    <span><i style="background:var(--c2)"></i>Preistrend</span>
-    <span><i style="background:var(--c3)"></i>30-Tage-Ø</span>
-    {% if r.target %}<span><i style="background:var(--good)"></i>Zielpreis</span>{% endif %}
-    <span class="muted">· Zeitraum: Min {{ d.window_min|eur }} · Max {{ d.window_max|eur }} · Ø {{ d.window_avg|eur }} · {{ d.history|length }} Messungen</span>
+    <span><i style="background:var(--c1)"></i>{{ _("Low (your filters)") }}</span>
+    <span><i style="background:var(--c2)"></i>{{ _("Price trend") }}</span>
+    <span><i style="background:var(--c3)"></i>{{ _("30-day avg.") }}</span>
+    {% if r.target %}<span><i style="background:var(--good)"></i>{{ _("Target price") }}</span>{% endif %}
+    <span class="muted">· {{ _("Period: min {min} · max {max} · avg {avg} · {n} data points").format(min=d.window_min|eur, max=d.window_max|eur, avg=d.window_avg|eur, n=d.history|length) }}</span>
   </div>
 </section>
 
 <div class="grid2">
   <section class="box">
-    <h2>Günstigste passende Angebote {% if s %}<span class="muted small">Stand {{ fmt_time(s.taken_at) }}</span>{% endif %}</h2>
+    <h2>{{ _("Cheapest matching offers") }} {% if s %}<span class="muted small">{{ _("as of {date}").format(date=fmt_time(s.taken_at)) }}</span>{% endif %}</h2>
     {% if s and s.offers %}
     <div class="table-wrap"><table>
-      <thead><tr><th class="num">Preis</th><th>Zustand</th><th>Sprache</th><th>Extras</th><th>Verkäufer</th><th>Land</th><th class="num">Stk.</th></tr></thead>
+      <thead><tr><th class="num">{{ _("Price") }}</th><th>{{ _("Condition") }}</th><th>{{ _("Language") }}</th><th>{{ _("Extras") }}</th><th>{{ _("Seller") }}</th><th>{{ _("Country") }}</th><th class="num">{{ _("Qty") }}</th></tr></thead>
       <tbody>
       {% for o in s.offers %}
         <tr><td class="num"><strong>{{ o.price|eur }}</strong></td><td title="{{ o.condition|condition }}">{{ o.condition or '–' }}</td>
@@ -68,35 +69,35 @@
       {% endfor %}
       </tbody>
     </table></div>
-    {% elif s %}<p class="muted">Aktuell keine Angebote, die deinen Filtern entsprechen.</p>
-    {% else %}<p class="muted">Noch keine Daten – die erste Prüfung steht noch aus.</p>{% endif %}
+    {% elif s %}<p class="muted">{{ _("Currently no offers match your filters.") }}</p>
+    {% else %}<p class="muted">{{ _("No data yet – the first check is still pending.") }}</p>{% endif %}
   </section>
 
   <section class="box">
-    <h2>Einstellungen dieser Karte</h2>
+    <h2>{{ _("Settings of this card") }}</h2>
     <dl class="kv small">
-      <dt>Filter</dt><dd>{{ d.filter_summary }}</dd>
-      <dt>Alerts</dt><dd>{{ d.alert_summary }}</dd>
-      <dt>Auto-Kauf</dt><dd>{% if card.buy.enabled %}bis {{ card.buy.max_price|eur }}, {{ card.buy.quantity }} Stück{% if not cfg.purchasing.enabled %} <span class="up">(global aus)</span>{% endif %}{% else %}aus{% endif %}</dd>
-      {% if card.product_id %}<dt>Produkt-ID</dt><dd>{{ card.product_id }}</dd>{% endif %}
-      {% if card.notes %}<dt>Notiz</dt><dd>{{ card.notes }}</dd>{% endif %}
+      <dt>{{ _("Filters") }}</dt><dd>{{ d.filter_summary }}</dd>
+      <dt>{{ _("Alerts") }}</dt><dd>{{ d.alert_summary }}</dd>
+      <dt>{{ _("Auto-buy") }}</dt><dd>{% if card.buy.enabled %}{{ _("up to {price}, {qty} pcs.").format(price=card.buy.max_price|eur, qty=card.buy.quantity) }}{% if not cfg.purchasing.enabled %} <span class="up">({{ _("globally off") }})</span>{% endif %}{% else %}{{ _("off") }}{% endif %}</dd>
+      {% if card.product_id %}<dt>{{ _("Product ID") }}</dt><dd>{{ card.product_id }}</dd>{% endif %}
+      {% if card.notes %}<dt>{{ _("Note") }}</dt><dd>{{ card.notes }}</dd>{% endif %}
     </dl>
-    <p><a class="btn small" href="/cards/{{ card.key }}/edit">✎ Bearbeiten</a></p>
+    <p><a class="btn small" href="/cards/{{ card.key }}/edit">✎ {{ _("Edit") }}</a></p>
 
-    <h3>Alerts</h3>
+    <h3>{{ _("Alerts") }}</h3>
     {% if d.alerts %}
     <table><tbody>
       {% for a in d.alerts[:15] %}
-      <tr><td class="small nowrap">{{ fmt_time(a.sent_at, '%d.%m. %H:%M') }}</td><td class="small">{{ a.message }}</td><td class="num small">{{ a.price|eur }}</td></tr>
+      <tr><td class="small nowrap">{{ fmt_time(a.sent_at, 'short') }}</td><td class="small">{{ a.message }}</td><td class="num small">{{ a.price|eur }}</td></tr>
       {% endfor %}
     </tbody></table>
-    {% else %}<p class="muted small">Keine Alerts im Zeitraum.</p>{% endif %}
+    {% else %}<p class="muted small">{{ _("No alerts in this period.") }}</p>{% endif %}
 
     {% if d.purchases %}
-    <h3>Käufe</h3>
+    <h3>{{ _("Purchases") }}</h3>
     <table><tbody>
       {% for p in d.purchases %}
-      <tr><td class="small">{{ fmt_time(p.created_at, '%d.%m. %H:%M') }}</td><td class="num small">{{ p.quantity }}× {{ p.price|eur }}</td><td class="small">{{ p.seller }}</td><td>{{ purchase_badge(p.status) }}</td></tr>
+      <tr><td class="small">{{ fmt_time(p.created_at, 'short') }}</td><td class="num small">{{ p.quantity }}× {{ p.price|eur }}</td><td class="small">{{ p.seller }}</td><td>{{ purchase_badge(p.status) }}</td></tr>
       {% endfor %}
     </tbody></table>
     {% endif %}

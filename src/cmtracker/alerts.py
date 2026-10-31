@@ -1,4 +1,4 @@
-"""Auswertung der Alert-Regeln und Entprellung (Cooldown)."""
+"""Alert rule evaluation and cooldown."""
 
 from __future__ import annotations
 
@@ -7,16 +7,21 @@ from datetime import datetime, timedelta
 
 from .config import AlertRules, CardConfig
 from .formatting import describe_offer, eur, pct
+from .i18n import _
 from .models import Snapshot
 from .storage import AlertRecord
 
 REFERENCE_NAMES = {
-    "trend": "Preistrend",
-    "avg1": "1-Tages-Durchschnitt",
-    "avg7": "7-Tages-Durchschnitt",
-    "avg30": "30-Tages-Durchschnitt",
-    "low": "ab-Preis",
+    "trend": "price trend",
+    "avg1": "1-day average",
+    "avg7": "7-day average",
+    "avg30": "30-day average",
+    "low": '"from" price',
 }
+
+
+def reference_name(reference: str) -> str:
+    return _(REFERENCE_NAMES.get(reference, reference))
 
 
 @dataclass(slots=True)
@@ -39,7 +44,11 @@ def evaluate_rules(
     hits: list[TriggeredRule] = []
 
     if rules.max_price is not None and price <= rules.max_price:
-        hits.append(TriggeredRule("max_price", price, f"Preis ≤ Zielpreis {eur(rules.max_price)}"))
+        hits.append(
+            TriggeredRule(
+                "max_price", price, _("Price ≤ target {target}").format(target=eur(rules.max_price))
+            )
+        )
 
     if (
         rules.drop_percent is not None
@@ -52,7 +61,9 @@ def evaluate_rules(
             TriggeredRule(
                 "drop_percent",
                 price,
-                f"{pct(change)} seit letzter Prüfung (vorher {eur(previous.min_price)})",
+                _("{change} since last check (was {before})").format(
+                    change=pct(change), before=eur(previous.min_price)
+                ),
             )
         )
 
@@ -63,18 +74,24 @@ def evaluate_rules(
         and price <= ref_value * (1 - rules.below_reference_percent / 100)
     ):
         below = (ref_value - price) / ref_value * 100
-        name = REFERENCE_NAMES[rules.reference]
+        name = reference_name(rules.reference)
         hits.append(
             TriggeredRule(
                 "below_reference",
                 price,
-                f"{pct(below, signed=False)} unter {name} ({eur(ref_value)})",
+                _("{pct} below {reference} ({value})").format(
+                    pct=pct(below, signed=False), reference=name, value=eur(ref_value)
+                ),
             )
         )
 
     if rules.all_time_low and all_time_low is not None and price < all_time_low:
         hits.append(
-            TriggeredRule("all_time_low", price, f"Neues Allzeit-Tief (bisher {eur(all_time_low)})")
+            TriggeredRule(
+                "all_time_low",
+                price,
+                _("New all-time low (previously {before})").format(before=eur(all_time_low)),
+            )
         )
     return hits
 
@@ -82,7 +99,7 @@ def evaluate_rules(
 def should_send(
     hit: TriggeredRule, last: AlertRecord | None, cooldown_hours: float, now: datetime
 ) -> bool:
-    """Gleicher Alarm höchstens alle ``cooldown_hours`` – außer der Preis fiel weiter."""
+    """Same alert at most every ``cooldown_hours`` – unless the price fell further."""
     if last is None:
         return True
     if now - last.sent_at >= timedelta(hours=cooldown_hours):
@@ -91,14 +108,20 @@ def should_send(
 
 
 def format_alert(card: CardConfig, snap: Snapshot, hits: list[TriggeredRule]) -> tuple[str, str]:
-    title = f"Preisalarm: {card.name}"
+    title = _("Price alert: {name}").format(name=card.name)
     lines = []
     if snap.cheapest:
-        lines.append(f"Günstigstes passendes Angebot: {describe_offer(snap.cheapest)}")
-    lines.append(f"Passende Angebote: {snap.offer_count} (von {snap.total_offer_count})")
+        lines.append(
+            _("Cheapest matching offer: {offer}").format(offer=describe_offer(snap.cheapest))
+        )
+    lines.append(
+        _("Matching offers: {matching} (of {total})").format(
+            matching=snap.offer_count, total=snap.total_offer_count
+        )
+    )
     if snap.price_guide.trend:
-        lines.append(f"Preistrend: {eur(snap.price_guide.trend)}")
+        lines.append(_("Price trend: {value}").format(value=eur(snap.price_guide.trend)))
     lines.append("")
-    lines.append("Ausgelöst durch:")
+    lines.append(_("Triggered by:"))
     lines.extend(f"• {h.reason}" for h in hits)
     return title, "\n".join(lines)

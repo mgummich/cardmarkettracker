@@ -72,7 +72,7 @@ def test_invalid_condition_is_reported():
 
 
 def test_duplicate_keys_rejected():
-    with pytest.raises(ConfigError, match="doppelt"):
+    with pytest.raises(ConfigError, match="used twice"):
         parse_config({"cards": [{"name": "X"}, {"name": "x"}]})
 
 

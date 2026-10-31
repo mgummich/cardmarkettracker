@@ -1,4 +1,4 @@
-"""Ausführlicher Bericht über alle getrackten Karten (HTML + Text-Zusammenfassung)."""
+"""Detailed report on all tracked cards (HTML + text summary)."""
 
 from __future__ import annotations
 
@@ -10,10 +10,11 @@ from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from ..alerts import REFERENCE_NAMES
+from ..alerts import reference_name
 from ..config import AppConfig, CardConfig
-from ..constants import LANGUAGE_NAMES_DE, country_name_de
-from ..formatting import change_pct, condition_name, eur, local_time, pct
+from ..constants import condition_name, country_name, language_name
+from ..formatting import change_pct, eur, local_time, pct
+from ..i18n import _, get_language
 from ..models import Snapshot, utcnow
 from ..storage import AlertRecord, Storage
 from .charts import line_chart
@@ -56,45 +57,52 @@ def summarize_filters(cfg: AppConfig, card: CardConfig) -> str:
     f = cfg.card_filters(card)
     parts = []
     if f.languages:
-        parts.append("Sprache: " + ", ".join(LANGUAGE_NAMES_DE.get(x, x) for x in f.languages))
+        parts.append(
+            _("Language: {languages}").format(
+                languages=", ".join(language_name(x) for x in f.languages)
+            )
+        )
     if f.min_condition:
-        parts.append(f"min. {f.min_condition}")
+        parts.append(_("min. {condition}").format(condition=f.min_condition))
     for attr, yes, no in (
-        ("foil", "Foil", "Non-Foil"),
-        ("signed", "signiert", "nicht signiert"),
-        ("altered", "altered", "nicht altered"),
-        ("first_edition", "1. Edition", "keine 1. Edition"),
+        ("foil", _("Foil"), _("non-foil")),
+        ("signed", _("signed"), _("not signed")),
+        ("altered", _("altered"), _("not altered")),
+        ("first_edition", _("1st edition"), _("no 1st edition")),
     ):
         value = getattr(f, attr)
         if value is not None:
             parts.append(yes if value else no)
     if f.seller_countries:
-        parts.append("Länder: " + ", ".join(f.seller_countries))
+        parts.append(_("Countries: {list}").format(list=", ".join(f.seller_countries)))
     if f.exclude_seller_countries:
-        parts.append("ohne: " + ", ".join(f.exclude_seller_countries))
+        parts.append(_("excluding: {list}").format(list=", ".join(f.exclude_seller_countries)))
     if f.seller_types:
-        parts.append("Verkäufer: " + ", ".join(f.seller_types))
+        parts.append(_("Sellers: {list}").format(list=", ".join(f.seller_types)))
     if f.min_price:
-        parts.append(f"ab {eur(f.min_price)}")
-    return " · ".join(parts) or "keine Filter"
+        parts.append(_("from {price}").format(price=eur(f.min_price)))
+    return " · ".join(parts) or _("no filters")
 
 
 def summarize_alerts(cfg: AppConfig, card: CardConfig) -> str:
     r = cfg.card_alerts(card)
     if not r.enabled:
-        return "Alerts deaktiviert"
+        return _("Alerts disabled")
     parts = []
     if r.max_price:
         parts.append(f"≤ {eur(r.max_price)}")
     if r.drop_percent:
-        parts.append(f"Fall ≥ {pct(r.drop_percent, signed=False)}")
+        parts.append(_("drop ≥ {pct}").format(pct=pct(r.drop_percent, signed=False)))
     if r.below_reference_percent:
         parts.append(
-            f"≥ {pct(r.below_reference_percent, signed=False)} unter {REFERENCE_NAMES[r.reference]}"
+            _("≥ {pct} below {reference}").format(
+                pct=pct(r.below_reference_percent, signed=False),
+                reference=reference_name(r.reference),
+            )
         )
     if r.all_time_low:
-        parts.append("Allzeit-Tief")
-    return " · ".join(parts) or "keine Regeln"
+        parts.append(_("all-time low"))
+    return " · ".join(parts) or _("no rules")
 
 
 def build_report(cfg: AppConfig, storage: Storage, now: datetime | None = None) -> Report:
@@ -134,10 +142,11 @@ def build_report(cfg: AppConfig, storage: Storage, now: datetime | None = None) 
                 alert_summary=summarize_alerts(cfg, card),
                 chart_svg=line_chart(
                     {
-                        "Tiefstpreis (gefiltert)": [(s.taken_at, s.min_price) for s in history],
-                        "Preistrend": [(s.taken_at, s.price_guide.trend) for s in history],
-                        "30-Tage-Ø": [(s.taken_at, s.price_guide.avg30) for s in history],
-                    }
+                        "low": [(s.taken_at, s.min_price) for s in history],
+                        "trend": [(s.taken_at, s.price_guide.trend) for s in history],
+                        "avg30": [(s.taken_at, s.price_guide.avg30) for s in history],
+                    },
+                    tz=cfg.general.timezone,
                 ),
             )
         )
@@ -154,37 +163,51 @@ def _env() -> Environment:
     env.filters["eur"] = eur
     env.filters["pct"] = pct
     env.filters["condition"] = condition_name
-    env.filters["country"] = country_name_de
-    env.filters["lang"] = lambda v: LANGUAGE_NAMES_DE.get(v or "", v or "–")
+    env.filters["country"] = country_name
+    env.filters["lang"] = language_name
+    env.globals["_"] = _
     return env
 
 
 def render_html(report: Report, top_offers: int = 5) -> str:
-    def fmt_time(dt: datetime, fmt: str = "%d.%m.%Y %H:%M") -> str:
+    def fmt_time(dt: datetime, fmt: str = "long") -> str:
         return local_time(dt, report.timezone, fmt)
 
     return (
         _env()
         .get_template("report.html.j2")
-        .render(report=report, top_offers=top_offers, fmt_time=fmt_time)
+        .render(report=report, top_offers=top_offers, fmt_time=fmt_time, lang=get_language())
     )
 
 
 def render_text(report: Report, public_url: str | None = None) -> str:
-    lines = [f"{len(report.cards)} Karten · Zeitraum {report.window_days} Tage", ""]
+    lines = [
+        _("{cards} cards · period {days} days").format(
+            cards=len(report.cards), days=report.window_days
+        ),
+        "",
+    ]
     for cr in report.cards:
         if not cr.latest:
-            lines.append(f"• {cr.card.name}: noch keine Daten")
+            lines.append("• " + _("{name}: no data yet").format(name=cr.card.name))
             continue
         lines.append(
-            f"• {cr.card.name}: ab {eur(cr.latest.min_price)} "
-            f"(24h {pct(cr.change_24h)}, 7T {pct(cr.change_7d)}) · "
-            f"Trend {eur(cr.latest.price_guide.trend)} · {cr.latest.offer_count} Angebote"
+            "• "
+            + _(
+                "{name}: from {price} (24h {d1}, 7d {d7}) · trend {trend} · {offers} offers"
+            ).format(
+                name=cr.card.name,
+                price=eur(cr.latest.min_price),
+                d1=pct(cr.change_24h),
+                d7=pct(cr.change_7d),
+                trend=eur(cr.latest.price_guide.trend),
+                offers=cr.latest.offer_count,
+            )
         )
     lines.append("")
-    lines.append(f"Alerts im Zeitraum: {report.alerts_total}")
+    lines.append(_("Alerts in period: {n}").format(n=report.alerts_total))
     if public_url:
-        lines.append(f"Vollständiger Bericht: {public_url.rstrip('/')}/latest.html")
+        lines.append(_("Full report: {url}").format(url=f"{public_url.rstrip('/')}/latest.html"))
     return "\n".join(lines)
 
 
@@ -192,7 +215,7 @@ def write_report(report: Report, output_dir: str | Path, top_offers: int = 5) ->
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     html = render_html(report, top_offers)
-    stamp = local_time(report.generated_at, report.timezone, "%Y-%m-%d_%H%M")
+    stamp = local_time(report.generated_at, report.timezone, "stamp")
     path = out / f"report_{stamp}.html"
     path.write_text(html, encoding="utf-8")
     (out / "latest.html").write_text(html, encoding="utf-8")
@@ -205,17 +228,17 @@ def export_csv(storage: Storage, card_key: str, path: str | Path) -> int:
         writer = csv.writer(fh, delimiter=";")
         writer.writerow(
             [
-                "zeitpunkt",
-                "angebote_passend",
-                "angebote_gesamt",
-                "tiefstpreis",
+                "taken_at",
+                "offers_matching",
+                "offers_total",
+                "min_price",
                 "avg5",
                 "median",
                 "trend",
                 "avg1",
                 "avg7",
                 "avg30",
-                "ab_preis",
+                "low",
             ]
         )
         for s in rows:

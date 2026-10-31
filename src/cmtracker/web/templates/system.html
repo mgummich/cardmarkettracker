@@ -1,48 +1,48 @@
 {% extends "base.html" %}
-{% block title %}System{% endblock %}
+{% block title %}{{ _("System") }}{% endblock %}
 {% block content %}
-<div class="page-head"><h1>System</h1></div>
+<div class="page-head"><h1>{{ _("System") }}</h1></div>
 <div class="grid2">
   <section class="box">
-    <h2>Hintergrunddienst</h2>
+    <h2>{{ _("Background service") }}</h2>
     {% if runner %}
     <dl class="kv">
-      <dt>Modus</dt><dd>{{ 'Zeitplan aktiv' if runner.scheduling else 'nur manuelle Prüfungen (cmtracker web)' }}</dd>
-      <dt>Gestartet</dt><dd>{{ fmt_time(runner.started_at) }}</dd>
-      <dt>Letzte Prüfung</dt><dd>{{ fmt_time(runner.last_check_at) }}{% if runner.last_check_seconds is not none %} · {{ runner.last_check_seconds }} s · {{ runner.last_check_alerts }} Alerts · {{ runner.last_check_errors }} Fehler{% endif %}</dd>
-      <dt>Nächste Prüfung</dt><dd>{{ fmt_time(runner.next_check_at) }}</dd>
-      <dt>Letzter Bericht</dt><dd>{{ fmt_time(runner.last_report_at) }}</dd>
-      <dt>Konfiguration geladen</dt><dd>{{ fmt_time(runner.last_reload_at) }}</dd>
+      <dt>{{ _("Mode") }}</dt><dd>{{ _("Schedule active") if runner.scheduling else _("manual checks only (cmtracker web)") }}</dd>
+      <dt>{{ _("Started") }}</dt><dd>{{ fmt_time(runner.started_at) }}</dd>
+      <dt>{{ _("Last check") }}</dt><dd>{{ fmt_time(runner.last_check_at) }}{% if runner.last_check_seconds is not none %} · {{ _("{s} s · {alerts} alerts · {errors} errors").format(s=runner.last_check_seconds, alerts=runner.last_check_alerts, errors=runner.last_check_errors) }}{% endif %}</dd>
+      <dt>{{ _("Next check") }}</dt><dd>{{ fmt_time(runner.next_check_at) }}</dd>
+      <dt>{{ _("Last report") }}</dt><dd>{{ fmt_time(runner.last_report_at) }}</dd>
+      <dt>{{ _("Configuration loaded") }}</dt><dd>{{ fmt_time(runner.last_reload_at) }}</dd>
     </dl>
-    {% else %}<p class="muted">Kein Hintergrunddienst verbunden.</p>{% endif %}
-    <h3>Dateien</h3>
+    {% else %}<p class="muted">{{ _("No background service connected.") }}</p>{% endif %}
+    <h3>{{ _("Files") }}</h3>
     <dl class="kv small">
-      <dt>Konfiguration</dt><dd><code>{{ config_path }}</code></dd>
-      <dt>Datenbank</dt><dd><code>{{ cfg.general.database }}</code></dd>
-      <dt>Berichte</dt><dd><code>{{ cfg.reports.output_dir }}</code></dd>
+      <dt>{{ _("Configuration") }}</dt><dd><code>{{ config_path }}</code></dd>
+      <dt>{{ _("Database") }}</dt><dd><code>{{ cfg.general.database }}</code></dd>
+      <dt>{{ _("Reports") }}</dt><dd><code>{{ cfg.reports.output_dir }}</code></dd>
     </dl>
   </section>
 
   <section class="box">
-    <h2>Bericht</h2>
-    <form method="post" action="/report" class="inline"><input type="hidden" name="send" value="0"><button class="btn" {{ 'disabled' if not runner }}>Bericht erstellen</button></form>
-    <form method="post" action="/report" class="inline"><input type="hidden" name="send" value="1"><button class="btn" {{ 'disabled' if not runner }}>Erstellen &amp; verschicken</button></form>
-    <h3>Vorhandene Berichte</h3>
+    <h2>{{ _("Report") }}</h2>
+    <form method="post" action="/report" class="inline"><input type="hidden" name="send" value="0"><button class="btn" {{ 'disabled' if not runner }}>{{ _("Create report") }}</button></form>
+    <form method="post" action="/report" class="inline"><input type="hidden" name="send" value="1"><button class="btn" {{ 'disabled' if not runner }}>{{ _("Create & send") }}</button></form>
+    <h3>{{ _("Existing reports") }}</h3>
     {% if reports %}
     <ul class="small">
-      <li><a href="/reports/latest.html" target="_blank"><strong>Aktueller Bericht</strong></a></li>
+      <li><a href="/reports/latest.html" target="_blank"><strong>{{ _("Latest report") }}</strong></a></li>
       {% for r in reports %}<li><a href="/reports/{{ r }}" target="_blank">{{ r }}</a></li>{% endfor %}
     </ul>
-    {% else %}<p class="muted small">Noch keine Berichte.</p>{% endif %}
+    {% else %}<p class="muted small">{{ _("No reports yet.") }}</p>{% endif %}
   </section>
 </div>
 
 <section class="box">
-  <h2>Benachrichtigungen</h2>
-  <p class="muted small">Kanäle werden in <code>config.yaml</code> gepflegt (Tokens gehören in die <code>.env</code>). Hier siehst du, was aktiv ist.</p>
+  <h2>{{ _("Notifications") }}</h2>
+  <p class="muted small">{{ _("Channels are maintained in config.yaml (tokens belong in .env). Here you can see what is active.") }}</p>
   {% if cfg.notifications %}
   <table>
-    <thead><tr><th>Kanal</th><th>Ziel</th><th>Ereignisse</th></tr></thead>
+    <thead><tr><th>{{ _("Channel") }}</th><th>{{ _("Target") }}</th><th>{{ _("Events") }}</th></tr></thead>
     <tbody>
       {% for n in cfg.notifications %}
       <tr><td><strong>{{ n.name or n.type }}</strong>{% if n.name %} <span class="muted small">({{ n.type }})</span>{% endif %}</td>
@@ -51,13 +51,13 @@
       {% endfor %}
     </tbody>
   </table>
-  {% else %}<p class="muted">Keine Kanäle konfiguriert – Meldungen landen nur im Log.</p>{% endif %}
-  <form method="post" action="/system/test-notify" style="margin-top:12px"><button class="btn">Testnachricht senden</button></form>
+  {% else %}<p class="muted">{{ _("No channels configured – messages only go to the log.") }}</p>{% endif %}
+  <form method="post" action="/system/test-notify" style="margin-top:12px"><button class="btn">{{ _("Send test message") }}</button></form>
 </section>
 
 <section class="box">
-  <h2>Schnittstellen</h2>
-  <p class="small">JSON-API für eigene Integrationen (z.B. Home Assistant): <a href="/api/cards">/api/cards</a>, <code>/api/cards/&lt;key&gt;/history?days=30</code>, <a href="/api/status">/api/status</a> · <a href="/api/docs">Dokumentation</a></p>
-  {% if not cfg.web.password %}<div class="flash warn">Die Oberfläche ist nicht passwortgeschützt. Setze <code>web.password</code> (z.B. <code>${WEB_PASSWORD}</code>), wenn sie außerhalb deines Rechners erreichbar ist.</div>{% endif %}
+  <h2>{{ _("Interfaces") }}</h2>
+  <p class="small">{{ _("JSON API for your own integrations (e.g. Home Assistant):") }} <a href="/api/cards">/api/cards</a>, <code>/api/cards/&lt;key&gt;/history?days=30</code>, <a href="/api/status">/api/status</a> · <a href="/api/docs">{{ _("Documentation") }}</a></p>
+  {% if not cfg.web.password %}<div class="flash warn">{{ _("The interface is not password-protected. Set web.password (e.g. ${WEB_PASSWORD}) if it is reachable from other machines.") }}</div>{% endif %}
 </section>
 {% endblock %}

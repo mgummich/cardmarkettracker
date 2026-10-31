@@ -1,8 +1,8 @@
-"""Laufzeit: Hintergrund-Thread für Prüfungen, Berichte und Konfigurations-Reload.
+"""Runtime: background thread for checks, reports and configuration reload.
 
-Der ``Runner`` besitzt die ``App`` exklusiv (SQLite-Verbindung, HTTP-Clients) und führt
-alles in *einem* Thread aus. Die Weboberfläche kommuniziert nur über
-``request_check``/``request_report``/``notify_config_changed`` und liest ``status``.
+The ``Runner`` owns the ``App`` exclusively (SQLite connection, HTTP clients) and runs
+everything in *one* thread. The web UI only talks to it via
+``request_check``/``request_report``/``notify_config_changed`` and reads ``status``.
 """
 
 from __future__ import annotations
@@ -18,14 +18,16 @@ from zoneinfo import ZoneInfo
 
 from .app import App
 from .config import AppConfig, ConfigError, load_config
+from .i18n import _, set_language
 from .models import utcnow
 
 log = logging.getLogger(__name__)
 
 STARTER_CONFIG = """\
-# Cardmarket Tracker – automatisch angelegt. Bearbeiten über die Weboberfläche
-# oder direkt hier (siehe config.example.yaml für alle Optionen).
+# Cardmarket Tracker – created automatically. Edit it in the web interface or here
+# (see config.example.yaml and https://mgummich.github.io/cardmarkettracker/ for all options).
 general:
+  language: en              # en | de – notifications, reports, CLI and logs
   interval_minutes: 60
   database: data/tracker.db
   timezone: Europe/Berlin
@@ -60,13 +62,13 @@ web:
 
 
 def ensure_config(path: str | Path) -> bool:
-    """Legt eine Start-Konfiguration an, falls keine existiert. True = neu angelegt."""
+    """Create a starter configuration if none exists. Returns True if it was created."""
     path = Path(path)
     if path.exists():
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(STARTER_CONFIG, encoding="utf-8")
-    log.warning("Keine Konfiguration gefunden – Start-Konfiguration unter %s angelegt", path)
+    log.warning(_("No configuration found – created a starter configuration at %s"), path)
     return True
 
 
@@ -75,7 +77,7 @@ class RunnerStatus:
     scheduling: bool = True
     started_at: datetime | None = None
     running: bool = False
-    current_task: str | None = None
+    current_task: str | None = None  # check | report
     last_check_at: datetime | None = None
     last_check_seconds: float | None = None
     last_check_errors: int = 0
@@ -85,7 +87,7 @@ class RunnerStatus:
     last_reload_at: datetime | None = None
     reloads: int = 0
     config_error: str | None = None
-    pending: list[str] = field(default_factory=list)
+    pending: list[str] = field(default_factory=list)  # check | report
 
 
 class Runner:
@@ -111,15 +113,13 @@ class Runner:
     def request_check(self, card_keys: list[str] | None = None) -> None:
         with self._lock:
             self._check_requests.append(card_keys)
-            self._status.pending.append(
-                "Prüfung: " + (", ".join(card_keys) if card_keys else "alle Karten")
-            )
+            self._status.pending.append("check")
         self._wake.set()
 
     def request_report(self, send: bool = False) -> None:
         with self._lock:
             self._report_requested = send
-            self._status.pending.append("Bericht")
+            self._status.pending.append("report")
         self._wake.set()
 
     def notify_config_changed(self) -> None:
@@ -163,10 +163,11 @@ class Runner:
         try:
             cfg = load_config(self.config_path)
         except ConfigError as exc:
-            log.error("Konfiguration fehlerhaft – bisherige wird weiterverwendet:\n%s", exc)
+            log.error(_("Configuration invalid – keeping the previous one:\n%s"), exc)
             self._set(config_error=str(exc))
             return None
         self._set(config_error=None)
+        set_language(cfg.general.language)  # language of this thread (messages, logs)
         return cfg
 
     def _mtime(self) -> float | None:
@@ -194,12 +195,12 @@ class Runner:
                     try:
                         new_app = App(cfg)
                     except Exception as exc:  # noqa: BLE001
-                        log.exception("Komponenten konnten nicht erstellt werden")
+                        log.exception(_("Could not create components"))
                         self._set(config_error=str(exc))
                     else:
                         if app is not None:
                             app.close()
-                            log.info("Konfiguration neu geladen (%d Karten)", len(cfg.cards))
+                            log.info(_("Configuration reloaded (%d cards)"), len(cfg.cards))
                         app = new_app
                         self._set(last_reload_at=utcnow(), reloads=self._status.reloads + 1)
                         if last_check_mono is not None:
@@ -244,7 +245,7 @@ class Runner:
 
         if app is not None:
             app.close()
-        log.info("Tracker beendet.")
+        log.info(_("Tracker stopped."))
 
     @staticmethod
     def _interval(cfg: AppConfig) -> float:
@@ -252,7 +253,7 @@ class Runner:
         return g.interval_minutes * 60 + random.uniform(0, g.jitter_seconds)
 
     def _do_check(self, app: App, keys: list[str] | None) -> None:
-        self._set(running=True, current_task="Prüfung läuft")
+        self._set(running=True, current_task="check")
         start = time.monotonic()
         try:
             results = app.run_check(keys)
@@ -261,7 +262,7 @@ class Runner:
                 last_check_alerts=sum(len(r.alerts_sent) for r in results),
             )
         except Exception:  # noqa: BLE001
-            log.exception("Unerwarteter Fehler bei der Prüfung")
+            log.exception(_("Unexpected error during check"))
         finally:
             self._set(
                 running=False,
@@ -271,11 +272,11 @@ class Runner:
             )
 
     def _do_report(self, app: App, send: bool) -> None:
-        self._set(running=True, current_task="Bericht wird erstellt")
+        self._set(running=True, current_task="report")
         try:
             app.run_report(send=send)
             self._set(last_report_at=utcnow())
         except Exception:  # noqa: BLE001
-            log.exception("Bericht konnte nicht erstellt werden")
+            log.exception(_("Could not create report"))
         finally:
             self._set(running=False, current_task=None)

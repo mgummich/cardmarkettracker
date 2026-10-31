@@ -21,10 +21,12 @@ Verfolge die Magic-, Pokémon-, Yu-Gi-Oh!- … Karten, die du suchst, filtere An
 wie du kaufst, werde benachrichtigt, sobald ein Preis unter dein Ziel fällt, und behalte alles
 in einem Web-Dashboard im Blick – auf deinem eigenen Server, NAS oder Raspberry Pi.
 
-![Dashboard](docs/assets/screenshots/dashboard.png)
+![Dashboard](docs/assets/screenshots/de/dashboard.png)
 
 ## Funktionen
 
+- **Deutsch & Englisch** – Weboberfläche mit EN/DE-Umschalter, Nachrichten und Berichte in
+  deiner Sprache (`general.language: de`)
 - **Web-Dashboard** – aktueller Tiefstpreis, 7-Tage-Verlauf, Änderung 24 h / 7 T, Abstand zum
   Zielpreis, interaktive Preisdiagramme pro Karte
 - **Konfiguration im Browser** – Karten, Filter, Alarme, Zeitplan, Berichte, Auto-Kauf;
@@ -49,7 +51,8 @@ mkdir -p config data && sudo chown -R 1000:1000 config data
 docker compose up -d
 ```
 
-**http://localhost:8080** öffnen (Benutzer `admin`) und die erste Karte anlegen. Die
+**http://localhost:8080** öffnen (Benutzer `admin`) und die erste Karte anlegen. Für deutsche
+Nachrichten und Berichte unter *Einstellungen → Prüfung & Sprache* auf Deutsch stellen. Die
 Start-Konfiguration nutzt simulierte Demo-Daten – du kannst alles ausprobieren, bevor du die
 Cardmarket-API anbindest.
 

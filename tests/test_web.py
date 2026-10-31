@@ -49,7 +49,8 @@ def test_pages_render(env):
         assert r.status_code == 200, url
     cards = client.get("/api/cards").json()
     assert {c["key"] for c in cards} == {"the-one-ring-ltr", "charizard-obf-223", "sol-ring-foil"}
-    assert all(c["min_price"] is not None for c in cards)
+    # demo data may have 0 matching offers in a given hour -> check that every card was checked
+    assert all(c["checked_at"] is not None and c["error"] is None for c in cards)
     assert client.get("/cards/unknown").status_code == 404
 
 
@@ -83,9 +84,12 @@ def test_create_edit_delete_card_keeps_comments(env):
     )
     assert r.status_code == 303 and r.headers["location"].startswith("/cards/ragavan")
     text = cfg_path.read_text(encoding="utf-8")
-    assert "# Benachrichtigungen" in text and "${CMTRACKER_PROVIDER:-demo}" in text
+    assert (
+        "# Notifications – any number of channels." in text
+        and "${CMTRACKER_PROVIDER:-demo}" in text
+    )
     # neue Karte steht vor dem Kommentarblock des nächsten Abschnitts
-    assert text.index("name: Ragavan") < text.index("# Benachrichtigungen")
+    assert text.index("name: Ragavan") < text.index("# Notifications – any number of channels.")
     card = load(cfg_path)["cards"][-1]
     assert card == {
         "name": "Ragavan",
@@ -122,7 +126,7 @@ def test_create_edit_delete_card_keeps_comments(env):
     # Ungültige Eingabe -> Fehlermeldung, Datei unverändert
     before = cfg_path.read_text(encoding="utf-8")
     r = client.post("/cards/ragavan/edit", data={"name": "X", "a_max_price": "abc"})
-    assert r.status_code == 200 and "keine Zahl" in r.text
+    assert r.status_code == 200 and "is not a number" in r.text
     assert cfg_path.read_text(encoding="utf-8") == before
 
     # Pausieren / Löschen
@@ -133,8 +137,10 @@ def test_create_edit_delete_card_keeps_comments(env):
     assert "err=" not in r.headers["location"], r.headers["location"]
     text = cfg_path.read_text(encoding="utf-8")
     assert "Ragavan" not in text, text[text.find("Ragavan") - 400 : text.find("Ragavan") + 200]
-    assert "# Benachrichtigungen" in text
-    assert text.index('name: "Sol Ring (Foil)"') < text.index("# Benachrichtigungen")
+    assert "# Notifications – any number of channels." in text
+    assert text.index('name: "Sol Ring (Foil)"') < text.index(
+        "# Notifications – any number of channels."
+    )
 
 
 def test_settings_and_validation(env):
@@ -148,7 +154,7 @@ def test_settings_and_validation(env):
     data = load(cfg_path)
     assert data["general"]["interval_minutes"] == 30 and data["general"]["notify_errors"] is True
     r = client.post("/settings/general", data={"timezone": "Mars/Olympus"})
-    assert "unbekannte Zeitzone" in r.text
+    assert "unknown time zone" in r.text
     r = client.post(
         "/settings/defaults",
         data={
@@ -210,7 +216,7 @@ def test_empty_starter_config_add_first_card(tmp_path, monkeypatch):
     cfg = tmp_path / "config.yaml"
     cfg.write_text(STARTER_CONFIG, encoding="utf-8")
     client = TestClient(create_app(cfg, None))
-    assert "Noch keine Karten" in client.get("/").text
+    assert "No cards yet" in client.get("/").text
     client.post("/cards-new", data={"name": "Sol Ring"})
     text = cfg.read_text(encoding="utf-8")
     assert "  - name: Sol Ring" in text and "[" not in text.split("cards:")[1].split("\n")[0]
@@ -243,3 +249,37 @@ def test_runner_reloads_changed_file(env):
     while not runner.status.config_error and time.time() < deadline:
         time.sleep(0.05)
     assert "YAML" in runner.status.config_error
+
+
+def test_ui_language_selection(env):
+    client, cfg_path, _runner = env
+    # browser preference
+    r = client.get("/", headers={"Accept-Language": "de-DE,de;q=0.9"})
+    assert '<html lang="de">' in r.text and "Karte hinzufügen" in r.text
+    r = client.get("/", headers={"Accept-Language": "en-US"})
+    assert '<html lang="en">' in r.text and "Add card" in r.text
+    # explicit switch via cookie wins over the browser
+    r = client.get("/lang/de?next=/settings", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/settings"
+    r = client.get("/settings", headers={"Accept-Language": "en-US"})
+    assert "Standardwerte für alle Karten" in r.text
+    # error messages are translated as well
+    r = client.post("/cards/the-one-ring-ltr/edit", data={"name": "X", "a_max_price": "abc"})
+    assert "ist keine Zahl" in r.text
+    r = client.get("/api/status")
+    assert r.status_code == 200
+    # open redirects are not possible
+    r = client.get("/lang/en?next=https://evil.example", follow_redirects=False)
+    assert r.headers["location"] == "/"
+    r = client.get("/lang/en?next=//evil.example", follow_redirects=False)
+    assert r.headers["location"] == "/"
+    client.cookies.clear()
+
+
+def test_language_setting_saved_from_ui(env):
+    client, cfg_path, _runner = env
+    r = client.post("/settings/general", data={"language": "de"}, follow_redirects=False)
+    assert r.status_code == 303
+    assert load(cfg_path)["general"]["language"] == "de"
+    r = client.post("/settings/general", data={"language": "fr"})
+    assert "general.language" in r.text

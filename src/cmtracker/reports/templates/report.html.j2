@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cardmarket Tracker – Bericht {{ fmt_time(report.generated_at, "%d.%m.%Y") }}</title>
+<title>Cardmarket Tracker – {{ _("Report") }} {{ fmt_time(report.generated_at, "date") }}</title>
 <style>
   :root {
     --bg: #f6f7f9; --card: #ffffff; --fg: #1d2330; --muted: #6b7280; --line: #e5e7eb;
@@ -48,19 +48,18 @@
 </head>
 <body>
 <main>
-  <h1>Cardmarket Tracker – Bericht</h1>
+  <h1>Cardmarket Tracker – {{ _("Report") }}</h1>
   <div class="muted">
-    Erstellt am {{ fmt_time(report.generated_at) }} · Zeitraum: letzte {{ report.window_days }} Tage
-    · {{ report.cards|length }} Karten · {{ report.alerts_total }} Alerts
+    {{ _("Generated {date} · period: last {days} days · {cards} cards · {alerts} alerts").format(date=fmt_time(report.generated_at), days=report.window_days, cards=report.cards|length, alerts=report.alerts_total) }}
   </div>
 
   <section class="box">
-    <h2>Übersicht</h2>
+    <h2>{{ _("Overview") }}</h2>
     <table>
       <thead><tr>
-        <th>Karte</th><th class="num">Tiefstpreis</th><th class="num">24 h</th>
-        <th class="num">7 Tage</th><th class="num">30 Tage</th><th class="num">vs. Trend</th>
-        <th class="num">Trend</th><th class="num">Allzeit-Tief</th><th class="num">Angebote</th>
+        <th>{{ _("Card") }}</th><th class="num">{{ _("Low") }}</th><th class="num">24 h</th>
+        <th class="num">{{ _("7 days") }}</th><th class="num">{{ _("30 days") }}</th><th class="num">{{ _("vs. trend") }}</th>
+        <th class="num">{{ _("Trend") }}</th><th class="num">{{ _("All-time low") }}</th><th class="num">{{ _("Offers") }}</th>
       </tr></thead>
       <tbody>
       {% for cr in report.cards %}
@@ -76,7 +75,7 @@
           <td class="num">{{ cr.all_time_low|eur }}</td>
           <td class="num">{{ s.offer_count }} / {{ s.total_offer_count }}</td>
           {% else %}
-          <td colspan="8" class="muted">noch keine Daten</td>
+          <td colspan="8" class="muted">{{ _("no data yet") }}</td>
           {% endif %}
         </tr>
       {% endfor %}
@@ -89,44 +88,44 @@
   <section class="box" id="{{ cr.card.key }}">
     <div class="head">
       <h2>{{ cr.card.name }} <span class="muted">· {{ cr.card.game }}</span></h2>
-      {% if s and s.product_url %}<a href="{{ s.product_url }}" target="_blank" rel="noopener">Auf Cardmarket öffnen ↗</a>{% endif %}
+      {% if s and s.product_url %}<a href="{{ s.product_url }}" target="_blank" rel="noopener">{{ _("Open on Cardmarket") }} ↗</a>{% endif %}
     </div>
-    <div class="tags muted">Filter: {{ cr.filter_summary }}<br>Alerts: {{ cr.alert_summary }}
-      {% if cr.card.buy.enabled %}<br>Auto-Kauf: bis {{ cr.card.buy.max_price|eur }}, {{ cr.card.buy.quantity }} Stück{% endif %}
-      {% if cr.card.notes %}<br>Notiz: {{ cr.card.notes }}{% endif %}
+    <div class="tags muted">{{ _("Filters") }}: {{ cr.filter_summary }}<br>{{ _("Alerts") }}: {{ cr.alert_summary }}
+      {% if cr.card.buy.enabled %}<br>{{ _("Auto-buy: up to {price}, {qty} pcs.").format(price=cr.card.buy.max_price|eur, qty=cr.card.buy.quantity) }}{% endif %}
+      {% if cr.card.notes %}<br>{{ _("Note") }}: {{ cr.card.notes }}{% endif %}
     </div>
 
     {% if s %}
     <div class="stats">
-      <div class="stat"><div class="label">Tiefstpreis jetzt</div><div class="value">{{ s.min_price|eur }}</div></div>
-      <div class="stat"><div class="label">Ø 5 günstigste</div><div class="value">{{ s.avg5_price|eur }}</div></div>
-      <div class="stat"><div class="label">Median</div><div class="value">{{ s.median_price|eur }}</div></div>
-      <div class="stat"><div class="label">Preistrend</div><div class="value">{{ s.price_guide.trend|eur }}</div></div>
-      <div class="stat"><div class="label">Ø 7 / 30 Tage (CM)</div><div class="value">{{ s.price_guide.avg7|eur }} / {{ s.price_guide.avg30|eur }}</div></div>
-      <div class="stat"><div class="label">Min / Max ({{ report.window_days }} T)</div><div class="value">{{ cr.window_min|eur }} / {{ cr.window_max|eur }}</div></div>
-      <div class="stat"><div class="label">Ø ({{ report.window_days }} T)</div><div class="value">{{ cr.window_avg|eur }}</div></div>
-      <div class="stat"><div class="label">Allzeit-Tief</div><div class="value">{{ cr.all_time_low|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Low now") }}</div><div class="value">{{ s.min_price|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Avg. of 5 cheapest") }}</div><div class="value">{{ s.avg5_price|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Median") }}</div><div class="value">{{ s.median_price|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Price trend") }}</div><div class="value">{{ s.price_guide.trend|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Avg. 7 / 30 days (CM)") }}</div><div class="value">{{ s.price_guide.avg7|eur }} / {{ s.price_guide.avg30|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Min / max ({days} d)").format(days=report.window_days) }}</div><div class="value">{{ cr.window_min|eur }} / {{ cr.window_max|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("Average ({days} d)").format(days=report.window_days) }}</div><div class="value">{{ cr.window_avg|eur }}</div></div>
+      <div class="stat"><div class="label">{{ _("All-time low") }}</div><div class="value">{{ cr.all_time_low|eur }}</div></div>
     </div>
 
     {{ cr.chart_svg|safe }}
     <div class="legend muted">
-      <span><i style="background:var(--c1)"></i>Tiefstpreis (gefiltert)</span>
-      <span><i style="background:var(--c2)"></i>Preistrend</span>
-      <span><i style="background:var(--c3)"></i>30-Tage-Ø</span>
+      <span><i style="background:var(--c1)"></i>{{ _("Low (filtered)") }}</span>
+      <span><i style="background:var(--c2)"></i>{{ _("Price trend") }}</span>
+      <span><i style="background:var(--c3)"></i>{{ _("30-day avg.") }}</span>
     </div>
 
-    <h3>Günstigste passende Angebote <span class="muted">(Stand {{ fmt_time(s.taken_at) }})</span></h3>
+    <h3>{{ _("Cheapest matching offers") }} <span class="muted">({{ _("as of {date}").format(date=fmt_time(s.taken_at)) }})</span></h3>
     {% if s.offers %}
     <table>
-      <thead><tr><th class="num">Preis</th><th>Zustand</th><th>Sprache</th><th>Extras</th>
-        <th>Verkäufer</th><th>Land</th><th class="num">Stk.</th></tr></thead>
+      <thead><tr><th class="num">{{ _("Price") }}</th><th>{{ _("Condition") }}</th><th>{{ _("Language") }}</th><th>{{ _("Extras") }}</th>
+        <th>{{ _("Seller") }}</th><th>{{ _("Country") }}</th><th class="num">{{ _("Qty") }}</th></tr></thead>
       <tbody>
       {% for o in s.offers[:top_offers] %}
         <tr>
           <td class="num"><strong>{{ o.price|eur }}</strong></td>
           <td>{{ o.condition or '–' }}</td>
           <td>{{ o.language|lang }}</td>
-          <td>{{ [o.foil and 'Foil', o.signed and 'signiert', o.altered and 'altered', o.first_edition and '1. Ed.']|select|join(', ') or '–' }}</td>
+          <td>{{ [o.foil and _('Foil'), o.signed and _('signed'), o.altered and _('altered'), o.first_edition and _('1st ed.')]|select|join(', ') or '–' }}</td>
           <td>{{ o.seller }}{% if o.seller_type and o.seller_type != 'private' %} <span class="muted">({{ o.seller_type }})</span>{% endif %}</td>
           <td>{{ o.seller_country|country }}</td>
           <td class="num">{{ o.quantity }}</td>
@@ -135,13 +134,13 @@
       </tbody>
     </table>
     {% else %}
-    <p class="muted">Aktuell keine Angebote, die den Filtern entsprechen.</p>
+    <p class="muted">{{ _("Currently no offers match the filters.") }}</p>
     {% endif %}
 
     {% if cr.alerts %}
-    <h3>Alerts im Zeitraum</h3>
+    <h3>{{ _("Alerts in period") }}</h3>
     <table>
-      <thead><tr><th>Zeitpunkt</th><th class="num">Preis</th><th>Grund</th></tr></thead>
+      <thead><tr><th>{{ _("Time") }}</th><th class="num">{{ _("Price") }}</th><th>{{ _("Reason") }}</th></tr></thead>
       <tbody>
       {% for a in cr.alerts[:10] %}
         <tr><td>{{ fmt_time(a.sent_at) }}</td><td class="num">{{ a.price|eur }}</td><td>{{ a.message }}</td></tr>
@@ -150,12 +149,12 @@
     </table>
     {% endif %}
     {% else %}
-    <p class="muted">Für diese Karte liegen noch keine Daten vor.</p>
+    <p class="muted">{{ _("No data for this card yet.") }}</p>
     {% endif %}
   </section>
   {% endfor %}
 
-  <p class="muted" style="margin-top:24px">Preise ohne Versandkosten. Daten: Cardmarket.</p>
+  <p class="muted" style="margin-top:24px">{{ _("Prices without shipping. Data: Cardmarket.") }}</p>
 </main>
 </body>
 </html>

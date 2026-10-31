@@ -94,8 +94,8 @@ Payload:
 ```json
 {
   "event": "alert",
-  "title": "Preisalarm: The One Ring (LTR)",
-  "message": "Günstigstes passendes Angebot: 43,90 € …",
+  "title": "Price alert: The One Ring (LTR)",
+  "message": "Cheapest matching offer: €43.90 …",
   "url": "https://www.cardmarket.com/en/Magic/Products/Singles/…"
 }
 ```

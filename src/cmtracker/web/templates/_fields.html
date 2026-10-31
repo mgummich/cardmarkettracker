@@ -1,83 +1,86 @@
-{# Wiederverwendbare Formularbausteine für Filter und Alert-Regeln #}
+{# Reusable form building blocks for filters and alert rules #}
 
 {% macro mode_select(name, mode, allow_inherit, target_id, disabled=false) -%}
 <select name="{{ name }}" data-mode-select="{{ target_id }}" {{ 'disabled' if disabled }}>
-  {% if allow_inherit %}<option value="inherit" {{ 'selected' if mode == 'inherit' }}>Standard</option>{% endif %}
-  <option value="any" {{ 'selected' if mode == 'any' }}>egal</option>
-  <option value="custom" {{ 'selected' if mode == 'custom' }}>Auswahl…</option>
+  {% if allow_inherit %}<option value="inherit" {{ 'selected' if mode == 'inherit' }}>{{ _("Default") }}</option>{% endif %}
+  <option value="any" {{ 'selected' if mode == 'any' }}>{{ _("any") }}</option>
+  <option value="custom" {{ 'selected' if mode == 'custom' }}>{{ _("Selection…") }}</option>
 </select>
 {%- endmacro %}
 
-{% macro env_badge(on) %}{% if on %}<span class="env-badge" title="Wert kommt aus einer Umgebungsvariable und ist nur in der config.yaml änderbar">${ENV}</span>{% endif %}{% endmacro %}
+{% macro env_badge(on) %}{% if on %}<span class="env-badge" title="{{ _('Value comes from an environment variable and can only be changed in config.yaml') }}">${ENV}</span>{% endif %}{% endmacro %}
+
+{% macro yes_no(value) %}{{ {True: _('yes'), False: _('no')}.get(value, _('any')) }}{% endmacro %}
 
 {% macro tri(name, label, value, allow_inherit, hint='') -%}
 <div class="field">
   <label>{{ label }}</label>
   <select name="{{ name }}">
-    {% if allow_inherit %}<option value="inherit" {{ 'selected' if value == 'inherit' }}>Standard</option>{% endif %}
-    <option value="any" {{ 'selected' if value == 'any' }}>egal</option>
-    <option value="yes" {{ 'selected' if value == 'yes' }}>ja</option>
-    <option value="no" {{ 'selected' if value == 'no' }}>nein</option>
+    {% if allow_inherit %}<option value="inherit" {{ 'selected' if value == 'inherit' }}>{{ _("Default") }}</option>{% endif %}
+    <option value="any" {{ 'selected' if value == 'any' }}>{{ _("any") }}</option>
+    <option value="yes" {{ 'selected' if value == 'yes' }}>{{ _("yes") }}</option>
+    <option value="no" {{ 'selected' if value == 'no' }}>{{ _("no") }}</option>
   </select>
   {% if hint %}<div class="hint">{{ hint }}</div>{% endif %}
 </div>
 {%- endmacro %}
 
-{% macro filter_fields(p, v, allow_inherit, parent=none, inherit_label='Standard') %}
+{% macro filter_fields(p, v, allow_inherit, parent=none, inherit_label=none) %}
 {% set env = v._env %}
+{% set inherit_label = inherit_label or _("Default") %}
 <div class="field">
-  <label>Sprachen {{ env_badge('languages' in env) }}</label>
+  <label>{{ _("Languages") }} {{ env_badge('languages' in env) }}</label>
   <div class="mode-row">
     {{ mode_select(p ~ 'languages_mode', v.languages.mode, allow_inherit, p ~ 'languages_box', 'languages' in env) }}
     <div class="mode-value" id="{{ p }}languages_box">
       <div class="chips" style="margin-top:2px">
-        {% for lang in LANGUAGES %}
-        <label><input type="checkbox" name="{{ p }}languages" value="{{ lang }}" {{ 'checked' if lang in v.languages['values'] }} {{ 'disabled' if 'languages' in env }}>{{ LANGUAGE_NAMES[lang] }}</label>
+        {% for lang_code in LANGUAGES %}
+        <label><input type="checkbox" name="{{ p }}languages" value="{{ lang_code }}" {{ 'checked' if lang_code in v.languages['values'] }} {{ 'disabled' if 'languages' in env }}>{{ lang_code|lang }}</label>
         {% endfor %}
       </div>
     </div>
   </div>
-  {% if parent and allow_inherit %}<div class="hint">{{ inherit_label }}: {{ parent.languages|map('lang')|join(', ') if parent.languages else 'egal' }}</div>{% endif %}
+  {% if parent and allow_inherit %}<div class="hint">{{ inherit_label }}: {{ parent.languages|map('lang')|join(', ') if parent.languages else _('any') }}</div>{% endif %}
 </div>
 
 <div class="fields">
   <div class="field">
-    <label>Mindestzustand {{ env_badge('min_condition' in env) }}</label>
+    <label>{{ _("Minimum condition") }} {{ env_badge('min_condition' in env) }}</label>
     <select name="{{ p }}min_condition" {{ 'disabled' if 'min_condition' in env }}>
-      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.min_condition == 'inherit' }}>Standard{% if parent %} ({{ parent.min_condition or 'egal' }}){% endif %}</option>{% endif %}
-      <option value="any" {{ 'selected' if v.min_condition == 'any' }}>egal</option>
-      {% for c in CONDITIONS %}<option value="{{ c }}" {{ 'selected' if v.min_condition == c }}>{{ c }} – {{ CONDITION_NAMES[c] }} oder besser</option>{% endfor %}
+      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.min_condition == 'inherit' }}>{{ _("Default") }}{% if parent %} ({{ parent.min_condition or _('any') }}){% endif %}</option>{% endif %}
+      <option value="any" {{ 'selected' if v.min_condition == 'any' }}>{{ _("any") }}</option>
+      {% for c in CONDITIONS %}<option value="{{ c }}" {{ 'selected' if v.min_condition == c }}>{{ _("{code} – {name} or better").format(code=c, name=c|condition) }}</option>{% endfor %}
     </select>
   </div>
-  {% for field, label in [('foil', 'Foil'), ('signed', 'Signiert'), ('altered', 'Altered'), ('first_edition', '1. Edition')] %}
-    {% set hint = (inherit_label ~ ': ' ~ ({True: 'ja', False: 'nein'}.get(parent[field], 'egal'))) if parent and allow_inherit else '' %}
+  {% for field, label in [('foil', _('Foil')), ('signed', _('Signed')), ('altered', _('Altered')), ('first_edition', _('1st edition'))] %}
+    {% set hint = (inherit_label ~ ': ' ~ yes_no(parent[field])) if parent and allow_inherit else '' %}
     {{ tri(p ~ field, label, v[field], allow_inherit, hint) }}
   {% endfor %}
   <div class="field">
-    <label>Mindestpreis (€) {{ env_badge('min_price' in env) }}</label>
+    <label>{{ _("Minimum price (€)") }} {{ env_badge('min_price' in env) }}</label>
     <input type="text" inputmode="decimal" name="{{ p }}min_price" value="{{ v.min_price }}" placeholder="{{ '%g'|format(parent.min_price) if parent and parent.min_price else '' }}" {{ 'disabled' if 'min_price' in env }}>
-    <div class="hint">Billigere Angebote ignorieren (Lockangebote){% if allow_inherit %} · leer = Standard, „aus“ = keiner{% endif %}</div>
+    <div class="hint">{{ _("Ignore cheaper offers (bait listings)") }}{% if allow_inherit %} · {{ _("empty = default, “off” = none") }}{% endif %}</div>
   </div>
 </div>
 
 <div class="field">
-  <label>Verkäufertyp {{ env_badge('seller_types' in env) }}</label>
+  <label>{{ _("Seller type") }} {{ env_badge('seller_types' in env) }}</label>
   <div class="mode-row">
     {{ mode_select(p ~ 'seller_types_mode', v.seller_types.mode, allow_inherit, p ~ 'seller_types_box', 'seller_types' in env) }}
     <div class="mode-value chips" id="{{ p }}seller_types_box" style="margin-top:2px">
-      {% for t in SELLER_TYPES %}<label><input type="checkbox" name="{{ p }}seller_types" value="{{ t }}" {{ 'checked' if t in v.seller_types['values'] }} {{ 'disabled' if 'seller_types' in env }}>{{ SELLER_TYPE_NAMES[t] }}</label>{% endfor %}
+      {% for t in SELLER_TYPES %}<label><input type="checkbox" name="{{ p }}seller_types" value="{{ t }}" {{ 'checked' if t in v.seller_types['values'] }} {{ 'disabled' if 'seller_types' in env }}>{{ t|seller_type }}</label>{% endfor %}
     </div>
   </div>
 </div>
 
-{% for field, label, ph in [('seller_countries', 'Nur Verkäufer aus', 'DE, AT, NL'), ('exclude_seller_countries', 'Keine Verkäufer aus', 'GB, US'), ('exclude_sellers', 'Gesperrte Verkäufer', 'Benutzername1, Benutzername2')] %}
+{% for field, label, ph in [('seller_countries', _('Only sellers from'), 'DE, AT, NL'), ('exclude_seller_countries', _('No sellers from'), 'GB, US'), ('exclude_sellers', _('Blocked sellers'), _('username1, username2'))] %}
 <div class="field">
   <label>{{ label }} {{ env_badge(field in env) }}</label>
   <div class="mode-row">
     {{ mode_select(p ~ field ~ '_mode', v[field].mode, allow_inherit, p ~ field ~ '_box', field in env) }}
     <div class="mode-value" id="{{ p }}{{ field }}_box">
       <input type="text" name="{{ p }}{{ field }}" value="{{ v[field].text }}" placeholder="{{ ph }}" {{ 'disabled' if field in env }}>
-      <div class="hint">Kommagetrennt{% if field != 'exclude_sellers' %}; Ländercodes oder Namen (z.B. DE, Deutschland){% endif %}</div>
+      <div class="hint">{{ _("Comma-separated") }}{% if field != 'exclude_sellers' %}; {{ _("country codes or names (e.g. DE, Germany)") }}{% endif %}</div>
     </div>
   </div>
   {% if parent and allow_inherit and parent[field] %}<div class="hint">{{ inherit_label }}: {{ parent[field]|join(', ') }}</div>{% endif %}
@@ -90,41 +93,42 @@
 {% set env = v._env %}
 <div class="fields">
   {% for field, label, unit, hint in [
-      ('max_price', 'Zielpreis', '€', 'Alarm, sobald das günstigste passende Angebot ≤ diesem Preis ist'),
-      ('drop_percent', 'Preissturz', '%', 'Alarm bei Fall um mind. X % seit der letzten Prüfung'),
-      ('below_reference_percent', 'Unter Referenzpreis', '%', 'Alarm, wenn mind. X % unter dem Referenzpreis'),
-      ('cooldown_hours', 'Wartezeit', 'h', 'Gleicher Alarm frühestens wieder nach X Stunden (außer der Preis fällt weiter)')] %}
+      ('max_price', _('Target price'), '€', _('Alert as soon as the cheapest matching offer is ≤ this price')),
+      ('drop_percent', _('Price drop'), '%', _('Alert when the price fell by at least X % since the last check')),
+      ('below_reference_percent', _('Below reference price'), '%', _('Alert when at least X % below the reference price')),
+      ('cooldown_hours', _('Cooldown'), 'h', _('Same alert again after X hours at the earliest (unless the price keeps falling)'))] %}
   <div class="field">
     <label>{{ label }} ({{ unit }}) {{ env_badge(field in env) }}</label>
     {% set pv = parent[field] if parent else none %}
     <input type="text" inputmode="decimal" name="{{ p }}{{ field }}" value="{{ v[field] }}"
-      placeholder="{{ ('%g'|format(pv) if pv is not none else 'aus') if allow_inherit and parent else '' }}" {{ 'disabled' if field in env }}>
-    <div class="hint">{{ hint }}{% if allow_inherit %} · leer = Standard{% if field != 'cooldown_hours' %}, „aus“ = deaktiviert{% endif %}{% endif %}</div>
+      placeholder="{{ ('%g'|format(pv) if pv is not none else _('off')) if allow_inherit and parent else '' }}" {{ 'disabled' if field in env }}>
+    <div class="hint">{{ hint }}{% if allow_inherit %} · {{ _("empty = default") }}{% if field != 'cooldown_hours' %}, {{ _("“off” = disabled") }}{% endif %}{% endif %}</div>
   </div>
   {% endfor %}
   <div class="field">
-    <label>Referenzpreis {{ env_badge('reference' in env) }}</label>
+    <label>{{ _("Reference price") }} {{ env_badge('reference' in env) }}</label>
     <select name="{{ p }}reference" {{ 'disabled' if 'reference' in env }}>
-      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.reference == 'inherit' }}>Standard{% if parent %} ({{ parent.reference }}){% endif %}</option>{% endif %}
-      {% for key, label in [('trend', 'Preistrend'), ('avg1', '1-Tages-Ø'), ('avg7', '7-Tages-Ø'), ('avg30', '30-Tages-Ø'), ('low', 'ab-Preis')] %}
-      <option value="{{ key }}" {{ 'selected' if v.reference == key }}>{{ label }}</option>
+      {% set ref_names = {'trend': _('price trend'), 'avg1': _('1-day average'), 'avg7': _('7-day average'), 'avg30': _('30-day average'), 'low': _('"from" price')} %}
+      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.reference == 'inherit' }}>{{ _("Default") }}{% if parent %} ({{ ref_names[parent.reference] }}){% endif %}</option>{% endif %}
+      {% for key in ['trend', 'avg1', 'avg7', 'avg30', 'low'] %}
+      <option value="{{ key }}" {{ 'selected' if v.reference == key }}>{{ ref_names[key] }}</option>
       {% endfor %}
     </select>
   </div>
   <div class="field">
-    <label>Allzeit-Tief melden</label>
+    <label>{{ _("Report all-time low") }}</label>
     <select name="{{ p }}all_time_low" {{ 'disabled' if 'all_time_low' in env }}>
-      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.all_time_low == 'inherit' }}>Standard{% if parent %} ({{ 'ja' if parent.all_time_low else 'nein' }}){% endif %}</option>{% endif %}
-      <option value="yes" {{ 'selected' if v.all_time_low == 'yes' }}>ja</option>
-      <option value="no" {{ 'selected' if v.all_time_low == 'no' }}>nein</option>
+      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.all_time_low == 'inherit' }}>{{ _("Default") }}{% if parent %} ({{ _('yes') if parent.all_time_low else _('no') }}){% endif %}</option>{% endif %}
+      <option value="yes" {{ 'selected' if v.all_time_low == 'yes' }}>{{ _("yes") }}</option>
+      <option value="no" {{ 'selected' if v.all_time_low == 'no' }}>{{ _("no") }}</option>
     </select>
   </div>
   <div class="field">
-    <label>Alerts</label>
+    <label>{{ _("Alerts") }}</label>
     <select name="{{ p }}enabled" {{ 'disabled' if 'enabled' in env }}>
-      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.enabled == 'inherit' }}>Standard{% if parent %} ({{ 'an' if parent.enabled else 'aus' }}){% endif %}</option>{% endif %}
-      <option value="yes" {{ 'selected' if v.enabled == 'yes' }}>an</option>
-      <option value="no" {{ 'selected' if v.enabled == 'no' }}>aus</option>
+      {% if allow_inherit %}<option value="inherit" {{ 'selected' if v.enabled == 'inherit' }}>{{ _("Default") }}{% if parent %} ({{ _('on') if parent.enabled else _('off') }}){% endif %}</option>{% endif %}
+      <option value="yes" {{ 'selected' if v.enabled == 'yes' }}>{{ _("on") }}</option>
+      <option value="no" {{ 'selected' if v.enabled == 'no' }}>{{ _("off") }}</option>
     </select>
   </div>
 </div>

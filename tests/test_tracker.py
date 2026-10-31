@@ -29,7 +29,7 @@ def test_alert_flow_with_cooldown(make_config, storage, hub, recorder):
     assert [h.rule for h in app.run_check()[0].alerts_sent] == ["max_price"]  # weiter gefallen
     alerts = [n for n in recorder.sent if n.event == "alert"]
     assert len(alerts) == 2
-    assert "9,50 €" in alerts[0].body
+    assert "€9.50" in alerts[0].body and "Price alert" in alerts[0].title
     assert len(storage.history("test")) == 4
 
 
@@ -125,7 +125,7 @@ def test_report_generation(make_config, storage, hub, recorder, tmp_path):
     path = app.run_report()
     html = path.read_text()
     assert "&lt;Lotus&gt;" in html and "<Lotus>" not in html
-    assert "<svg" in html and "9,00 €" in html and "noch keine Daten" in html
+    assert "<svg" in html and "€9.00" in html and "no data yet" in html
     assert (tmp_path / "latest.html").exists()
     report_msg = [n for n in recorder.sent if n.event == "report"][0]
     assert "https://t.example/latest.html" in report_msg.body
@@ -143,3 +143,29 @@ def test_daily_report_due_once_per_day(make_config, storage, hub):
     storage.set_meta("last_report_date", "2026-10-31")
     assert not app._report_due(datetime(2026, 10, 31, 22, 0, tzinfo=tz))
     assert app._report_due(datetime(2026, 11, 1, 8, 5, tzinfo=tz))
+
+
+def test_messages_and_report_follow_configured_language(
+    make_config, storage, hub, recorder, tmp_path
+):
+    from cmtracker.i18n import language
+
+    app, provider = make_app(
+        make_config,
+        storage,
+        hub,
+        general={"language": "de"},
+        reports={"output_dir": str(tmp_path)},
+        cards=[{"name": "Lotus", "key": "test", "alerts": {"max_price": 10}}],
+    )
+    provider.push("test", market([12], trend=12.5))
+    provider.push("test", market([9.5], trend=12.0))
+    with language(app.cfg.general.language):  # what the runner thread does
+        app.run_check()
+        app.run_check()
+        path = app.run_report()
+    alert = [n for n in recorder.sent if n.event == "alert"][0]
+    assert alert.title == "Preisalarm: Lotus"
+    assert "9,50 €" in alert.body and "Preis ≤ Zielpreis 10,00 €" in alert.body
+    html = path.read_text()
+    assert '<html lang="de">' in html and "Übersicht" in html and "9,50 €" in html

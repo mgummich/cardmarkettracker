@@ -10,7 +10,7 @@ Verfolge die Karten, die du suchst, filtere Angebote genau so, wie du kaufst (Sp
 Foil, Verkäuferland, …), werde benachrichtigt, sobald ein Preis unter dein Ziel fällt, und
 behalte alles in einem übersichtlichen Web-Dashboard im Blick.
 
-![Dashboard](assets/screenshots/dashboard.png)
+![Dashboard](assets/screenshots/de/dashboard.png)
 
 ## Funktionen
 

@@ -22,12 +22,18 @@ Auf **＋ Karte hinzufügen** klicken und ausfüllen:
 | Cardmarket-URL | `https://www.cardmarket.com/de/Magic/Products/Singles/…` | Pflicht für den Scraper |
 | Zielpreis | `45` | Alarm, sobald das günstigste passende Angebot ≤ 45 € ist |
 
+Die Oberfläche richtet sich nach deiner Browsersprache; mit **EN / DE** oben rechts
+schaltest du zwischen Englisch und Deutsch um.
+
+Für **deutsche Nachrichten und Berichte** in der `config.yaml` `general.language: de` setzen
+(oder unter *Einstellungen → Prüfung & Sprache*).
+
 Unter **Filter** wählst du Sprachen und Mindestzustand. Felder auf **Standard** übernehmen die
 allgemeinen Werte aus den *Einstellungen*; der jeweils geltende Wert steht grau im Feld.
 
 Speichern – die erste Prüfung startet sofort und du landest auf der Kartenseite.
 
-![Kartenseite](../assets/screenshots/card-detail.png)
+![Kartenseite](../assets/screenshots/de/card-detail.png)
 
 ## 3. Benachrichtigungen einrichten
 

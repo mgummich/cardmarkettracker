@@ -1,4 +1,4 @@
-"""Kernlogik: Karte abrufen → filtern → speichern → Alerts → ggf. kaufen."""
+"""Core logic: fetch card → filter → store → alerts → optionally buy."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from .alerts import TriggeredRule, evaluate_rules, format_alert, should_send
 from .config import AppConfig, CardConfig
 from .filters import build_snapshot, filter_offers
 from .formatting import describe_offer, eur
+from .i18n import _
 from .models import Snapshot, utcnow
 from .notifiers import Notification, NotificationHub
 from .providers import PriceProvider
@@ -56,7 +57,7 @@ class Tracker:
         return results
 
     def check_card(self, card: CardConfig) -> CheckResult:
-        result, _ = self._check_card_safe(card, self._initial_budget())
+        result, _spent = self._check_card_safe(card, self._initial_budget())
         return result
 
     # ------------------------------------------------------------------ Intern
@@ -67,11 +68,16 @@ class Tracker:
             self.storage.set_card_status(card.key, None)
             return outcome
         except Exception as exc:  # noqa: BLE001 - eine Karte darf den Lauf nicht abbrechen
-            log.error("Fehler bei '%s': %s", card.name, exc)
+            log.error(_("Error for '%s': %s"), card.name, exc)
             self.storage.set_card_status(card.key, str(exc))
             if self.cfg.general.notify_errors:
                 self.hub.send(
-                    Notification(f"Fehler bei {card.name}", str(exc), event="error", url=card.url)
+                    Notification(
+                        _("Error for {name}").format(name=card.name),
+                        str(exc),
+                        event="error",
+                        url=card.url,
+                    )
                 )
             return CheckResult(card.key, error=str(exc)), 0.0
 
@@ -88,7 +94,7 @@ class Tracker:
             snap.product_url = card.url
         self.storage.save_snapshot(snap)
         log.info(
-            "%s: %d/%d passende Angebote, ab %s (Trend %s)",
+            _("%s: %d/%d matching offers, from %s (trend %s)"),
             card.name,
             snap.offer_count,
             snap.total_offer_count,
@@ -175,14 +181,17 @@ class Tracker:
             if result.status != "failed":
                 spent += decision.total
             label = {
-                "simulated": "Kauf simuliert",
-                "in_cart": "In den Warenkorb gelegt",
-                "ordered": "Gekauft",
-                "failed": "Kauf fehlgeschlagen",
+                "simulated": _("Purchase simulated"),
+                "in_cart": _("Added to cart"),
+                "ordered": _("Bought"),
+                "failed": _("Purchase failed"),
             }.get(result.status, result.status)
-            body = (
-                f"{decision.quantity}x {describe_offer(offer)}\n"
-                f"Summe: {eur(decision.total)} (zzgl. Versand)\n{result.detail}"
+            body = "\n".join(
+                [
+                    f"{decision.quantity}x {describe_offer(offer)}",
+                    _("Total: {total} (plus shipping)").format(total=eur(decision.total)),
+                    result.detail,
+                ]
             )
             event = "error" if result.status == "failed" else "purchase"
             self.hub.send(Notification(f"{label}: {card.name}", body, event=event, url=card.url))

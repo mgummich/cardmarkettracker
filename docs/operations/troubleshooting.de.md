@@ -53,6 +53,13 @@ Er wird einmal pro Tag nach `reports.daily_time` (Ortszeit) verschickt, nur von 
 und nur, wenn mindestens eine Karte eingerichtet ist. Startet der Tracker nach dieser Uhrzeit,
 kommt der Bericht sofort.
 
+## Nachrichten oder Oberfläche sind in der falschen Sprache
+
+Die Weboberfläche nutzt den EN/DE-Umschalter (Cookie), sonst deine Browsersprache.
+Benachrichtigungen, Berichte, Kommandozeile und Log nutzen `general.language` – für Deutsch
+`language: de` setzen. Bereits gespeicherte Alarme behalten die Sprache, in der sie
+verschickt wurden.
+
 ## Sind Versandkosten enthalten?
 
 Nein. Alle Preise sind Artikelpreise ohne Versand.

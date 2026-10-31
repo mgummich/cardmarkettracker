@@ -29,18 +29,18 @@ Example with `max_price: 45`, `cooldown_hours: 12`:
 | 11:00 | 43.90 € | **yes** – cheaper than at the last alert |
 | 21:30 | 44.10 € | **yes** – cooldown expired |
 
-All rules triggered in one check are combined into one message (messages are currently
-German):
+All rules triggered in one check are combined into one message (language:
+`general.language`):
 
 ```text
-Preisalarm: The One Ring (LTR)
-Günstigstes passendes Angebot: 43,90 € (NM, Englisch) – seller_x, Deutschland [2x verfügbar]
-Passende Angebote: 4 (von 31)
-Preistrend: 52,10 €
+Price alert: The One Ring (LTR)
+Cheapest matching offer: €43.90 (NM, English) – seller_x, Germany [2x available]
+Matching offers: 4 (of 31)
+Price trend: €52.10
 
-Ausgelöst durch:
-• Preis ≤ Zielpreis 45,00 €
-• 15,7 % unter Preistrend (52,10 €)
+Triggered by:
+• Price ≤ target €45.00
+• 15.7% below price trend (€52.10)
 ```
 
 ## Defaults and overrides
@@ -61,7 +61,7 @@ cards:
 ```
 
 Keys set on the card override the defaults; `null` disables a rule. In the web UI that is
-"empty = default" and `aus` = off.
+"empty = default" and `off` = disabled.
 
 !!! tip "Good starting values"
     - Cards you want to *buy*: `max_price` slightly below what you would pay.

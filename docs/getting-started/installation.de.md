@@ -47,6 +47,11 @@ docker compose logs -f
 
 Dann **http://localhost:8080** öffnen (Benutzer `admin`, Passwort aus `WEB_PASSWORD`).
 
+!!! tip "Deutsch einstellen"
+    Die Oberfläche folgt deiner Browsersprache (Umschalter **EN / DE** oben rechts). Für
+    deutsche Benachrichtigungen und Berichte unter *Einstellungen → Prüfung & Sprache* auf
+    *Deutsch* stellen (entspricht `general.language: de`).
+
 !!! info "Erster Start"
     Gibt es noch keine `config/config.yaml`, wird eine Start-Konfiguration mit der
     **Demo**-Datenquelle angelegt. Karten kannst du sofort in der Weboberfläche hinzufügen.

@@ -23,6 +23,7 @@ from ..constants import (
     normalize_language,
     normalize_seller_type,
 )
+from ..i18n import _
 
 POP = object()
 
@@ -65,14 +66,14 @@ def parse_number(text: str | None, field: str, *, allow_off: bool, integer: bool
     if text.lower() in ("aus", "off", "-", "keine", "none"):
         if allow_off:
             return None
-        raise FormError(field, "„aus“ ist hier nicht erlaubt")
+        raise FormError(field, _("“off” is not allowed here"))
     try:
         value = float(text.replace(",", "."))
     except ValueError:
-        raise FormError(field, f"„{text}“ ist keine Zahl") from None
+        raise FormError(field, _("“{text}” is not a number").format(text=text)) from None
     if integer:
         if value != int(value):
-            raise FormError(field, "ganze Zahl erwartet")
+            raise FormError(field, _("whole number expected"))
         return int(value)
     return int(value) if value.is_integer() else value
 
@@ -133,7 +134,7 @@ def parse_filters(form: FormData, prefix: str, allow_inherit: bool) -> dict[str,
                 if value not in items:
                     items.append(value)
             if not items:
-                raise FormError(field, "„Auswahl“ gewählt, aber nichts angegeben")
+                raise FormError(field, _("“Selection” chosen but nothing selected"))
         out[field] = mode_value(mode, items)
 
     cond = _get(form, f"{prefix}min_condition")
@@ -234,7 +235,7 @@ def parse_alerts(form: FormData, prefix: str, allow_inherit: bool) -> dict[str, 
         elif ref in ("trend", "avg1", "avg7", "avg30", "low"):
             out["reference"] = ref
         else:
-            raise FormError("reference", "unbekannter Referenzpreis")
+            raise FormError("reference", _("unknown reference price"))
     return out
 
 
@@ -261,13 +262,13 @@ def parse_card(form: FormData, is_new: bool) -> dict[str, Any]:
     """Liefert Updates für die Karte inkl. Unterabschnitte (``filters``, ``alerts``, ``buy``)."""
     name = _get(form, "name") or ""
     if not name:
-        raise FormError("name", "Name ist Pflicht")
+        raise FormError("name", _("Name is required"))
     out: dict[str, Any] = {"name": name}
     if is_new:
         key = _get(form, "key") or ""
         if key:
             if not re.fullmatch(r"[a-z0-9][a-z0-9\-_]*", key):
-                raise FormError("key", "nur Kleinbuchstaben, Ziffern, - und _")
+                raise FormError("key", _("only lowercase letters, digits, - and _"))
             out["key"] = key
     for field in ("game", "url", "notes"):
         value = _get(form, field)

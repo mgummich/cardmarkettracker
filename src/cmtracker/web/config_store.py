@@ -61,7 +61,7 @@ def take_tail_comment(node: Any) -> str | None:
     token = entry[_slot(owner)] if entry and len(entry) > _slot(owner) else None
     if token is None:
         return None
-    first, _, rest = token.value.partition("\n")
+    first, _sep, rest = token.value.partition("\n")
     if not rest.strip():
         return None
     if first.strip():

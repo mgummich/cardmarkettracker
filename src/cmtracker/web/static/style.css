@@ -161,3 +161,11 @@ dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; ma
 dl.kv dt { color: var(--muted); }
 dl.kv dd { margin: 0; }
 footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 20px; }
+
+/* Sprachumschalter ------------------------------------------------------- */
+.lang-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 7px;
+               overflow: hidden; font-size: .8rem; }
+.lang-switch a { padding: 3px 8px; color: var(--muted); font-weight: 600; }
+.lang-switch a + a { border-left: 1px solid var(--line); }
+.lang-switch a.active { background: var(--info-bg); color: var(--accent); }
+.lang-switch a:hover { text-decoration: none; color: var(--fg); }

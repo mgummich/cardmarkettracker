@@ -38,6 +38,7 @@ flowchart TB
 | `runtime.py` | `Runner`: owns the `App` in one thread; schedule, manual requests, config reload |
 | `web/` | FastAPI app, `ConfigStore` (ruamel.yaml round-trip), form ↔ YAML mapping, templates |
 | `cli.py` | `argparse` commands |
+| `i18n.py`, `locales/` | translations: English source strings in `_()`, German catalog in `locales/de.py`, active language in a `ContextVar` |
 
 ## Design decisions
 

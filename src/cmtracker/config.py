@@ -16,6 +16,7 @@ from .constants import (
     normalize_language,
     normalize_seller_type,
 )
+from .i18n import _
 
 Event = Literal["alert", "report", "purchase", "error"]
 ALL_EVENTS: list[str] = ["alert", "report", "purchase", "error"]
@@ -116,7 +117,7 @@ class BuyRules(_Model):
     @model_validator(mode="after")
     def _check(self) -> BuyRules:
         if self.enabled and self.max_price is None:
-            raise ValueError("buy.max_price ist Pflicht, wenn buy.enabled = true")
+            raise ValueError(_("buy.max_price is required when buy.enabled is true"))
         return self
 
 
@@ -178,7 +179,7 @@ class ProviderConfig(_Model):
     @model_validator(mode="after")
     def _check(self) -> ProviderConfig:
         if self.type == "mkm_api" and self.mkm_api is None:
-            raise ValueError("provider.mkm_api muss gesetzt sein, wenn provider.type = mkm_api")
+            raise ValueError(_("provider.mkm_api must be set when provider.type is mkm_api"))
         return self
 
 
@@ -241,6 +242,8 @@ NotifierConfig = Annotated[
 
 
 class GeneralConfig(_Model):
+    language: Literal["en", "de"] = "en"
+    """Language of notifications, reports, CLI and logs (web UI: per browser)."""
     interval_minutes: float = Field(default=60, ge=1)
     jitter_seconds: float = Field(default=60, ge=0)
     database: str = "data/tracker.db"
@@ -258,7 +261,9 @@ class GeneralConfig(_Model):
         try:
             ZoneInfo(v)
         except (ZoneInfoNotFoundError, ValueError):
-            raise ValueError(f"unbekannte Zeitzone {v!r} (z.B. Europe/Berlin)") from None
+            raise ValueError(
+                _("unknown time zone {value} (e.g. Europe/Berlin)").format(value=repr(v))
+            ) from None
         return v
 
 
@@ -283,7 +288,7 @@ class ReportConfig(_Model):
         if v is None:
             return None
         if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
-            raise ValueError("daily_time muss im Format HH:MM sein")
+            raise ValueError(_("daily_time must use the format HH:MM"))
         return v
 
 
@@ -319,20 +324,26 @@ class AppConfig(_Model):
         for card in self.cards:
             if card.key in seen:
                 raise ValueError(
-                    f"Karten-Key '{card.key}' ist doppelt – setze bei einer der Karten 'key' "
-                    "explizit (z.B. bei gleicher Karte mit anderen Filtern)."
+                    _(
+                        "Card key '{key}' is used twice – set 'key' explicitly on one of the "
+                        "cards (e.g. same card with different filters)."
+                    ).format(key=card.key)
                 )
             seen.add(card.key)
             if self.provider.type == "mkm_api" and card.product_id is None:
-                raise ValueError(f"Karte '{card.name}': product_id ist für mkm_api Pflicht")
+                raise ValueError(
+                    _("Card '{name}': product_id is required for mkm_api").format(name=card.name)
+                )
             if self.provider.type == "scraper" and not card.url:
-                raise ValueError(f"Karte '{card.name}': url ist für den Scraper Pflicht")
+                raise ValueError(
+                    _("Card '{name}': url is required for the scraper").format(name=card.name)
+                )
         if (
             self.purchasing.enabled
             and self.purchasing.mode == "cart"
             and self.provider.type != "mkm_api"
         ):
-            raise ValueError("purchasing.mode = cart funktioniert nur mit provider.type = mkm_api")
+            raise ValueError(_("purchasing.mode cart only works with provider.type mkm_api"))
         return self
 
     # Effektive Einstellungen pro Karte (Defaults + Overrides) --------------------------
@@ -375,7 +386,7 @@ def expand_env(value: Any) -> Any:
                 return env
             if default is not None:
                 return default
-            raise ConfigError(f"Umgebungsvariable {name} ist nicht gesetzt")
+            raise ConfigError(_("Environment variable {name} is not set").format(name=name))
 
         return _ENV_PATTERN.sub(repl, value)
     if isinstance(value, list):
@@ -389,7 +400,7 @@ def parse_config(data: dict[str, Any]) -> AppConfig:
     try:
         return AppConfig.model_validate(expand_env(data or {}))
     except ValidationError as exc:
-        lines = ["Konfiguration ungültig:"]
+        lines = [_("Invalid configuration:")]
         for err in exc.errors():
             loc = ".".join(str(p) for p in err["loc"])
             lines.append(f"  - {loc}: {err['msg']}")
@@ -400,11 +411,15 @@ def load_config(path: str | Path) -> AppConfig:
     path = Path(path)
     if not path.exists():
         raise ConfigError(
-            f"Konfigurationsdatei {path} nicht gefunden – kopiere config.example.yaml nach {path}"
+            _("Configuration file {path} not found – copy config.example.yaml to {path}").format(
+                path=path
+            )
         )
     with path.open(encoding="utf-8") as fh:
         try:
             data = yaml.safe_load(fh)
         except yaml.YAMLError as exc:
-            raise ConfigError(f"YAML-Fehler in {path}: {exc}") from None
+            raise ConfigError(
+                _("YAML error in {path}: {error}").format(path=path, error=exc)
+            ) from None
     return parse_config(data)

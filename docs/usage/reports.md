@@ -29,4 +29,9 @@ cmtracker export the-one-ring-ltr -o one-ring.csv   # full history as CSV (semic
 cmtracker history the-one-ring-ltr --days 14        # history in the terminal
 ```
 
+CSV columns: `taken_at`, `offers_matching`, `offers_total`, `min_price`, `avg5`, `median`,
+`trend`, `avg1`, `avg7`, `avg30`, `low`.
+
+The report is written in `general.language`.
+
 For your own dashboards (Grafana, Home Assistant, spreadsheets) use the [JSON API](../reference/api.md).

@@ -20,6 +20,7 @@ from ..config import (
     TelegramConfig,
     WebhookConfig,
 )
+from ..i18n import _
 from .base import Notification, Notifier
 
 log = logging.getLogger(__name__)
@@ -48,7 +49,8 @@ class TelegramNotifier(_HttpNotifier):
     def send(self, n: Notification) -> None:
         text = f"<b>{html.escape(n.title)}</b>\n\n{html.escape(n.body)}"
         if n.url:
-            text += f'\n\n<a href="{html.escape(n.url, quote=True)}">Auf Cardmarket öffnen</a>'
+            link = html.escape(n.url, quote=True)
+            text += f'\n\n<a href="{link}">{html.escape(_("Open on Cardmarket"))}</a>'
         resp = self.http.post(
             f"{self.api}/sendMessage",
             json={

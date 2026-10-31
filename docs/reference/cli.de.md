@@ -9,6 +9,10 @@ cmtracker [-c CONFIG] [--log-level LEVEL] [--version] <befehl> [optionen]
 | `-c`, `--config` | Pfad zur `config.yaml` (Standard: `$CMTRACKER_CONFIG` oder `./config.yaml`) |
 | `--log-level` | überschreibt `general.log_level` |
 
+Ausgabesprache: `general.language` aus der Konfiguration. Meldungen vor dem Laden der
+Konfiguration (z.B. „Datei nicht gefunden“) richten sich nach der Umgebungsvariable
+`CMTRACKER_LANGUAGE` (`en`/`de`, Standard `en`).
+
 Unter Docker den Befehlen `docker compose exec tracker` voranstellen, z.B.
 `docker compose exec tracker cmtracker check`.
 

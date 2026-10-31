@@ -8,11 +8,11 @@ API access. Switching to real data is one setting (see [Data sources](../configu
 Follow the [installation](installation.md) and open the web UI at `http://localhost:8080`.
 The dashboard is empty:
 
-> 🃏 **No cards yet** – add your first card …
+> 🃏 **No cards yet** – Add your first card …
 
 ## 2. Add a card
 
-Click **＋ Add card** (*Karte hinzufügen*) and fill in:
+Click **＋ Add card** and fill in:
 
 | Field | Example | Note |
 |---|---|---|
@@ -22,12 +22,15 @@ Click **＋ Add card** (*Karte hinzufügen*) and fill in:
 | Cardmarket URL | `https://www.cardmarket.com/en/Magic/Products/Singles/…` | required for the scraper |
 | Target price | `45` | alert when the cheapest matching offer is ≤ 45 € |
 
+The interface follows your browser language; switch between English and German with
+**EN / DE** in the top right corner.
+
 Under **Filters** choose the languages and minimum condition you accept. Fields set to
 **Default** use the global defaults from *Settings*; the effective default is shown greyed out.
 
 Save – the first check starts immediately and you land on the card page.
 
-![Card page](../assets/screenshots/card-detail.png)
+![Card page](../assets/screenshots/en/card-detail.png)
 
 ## 3. Get notified
 

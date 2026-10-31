@@ -2,9 +2,18 @@
 
 `cmtracker run` startet den Tracker **und** die Weboberfläche (Standard-Port `8080`).
 
+## Sprache
+
+Die Oberfläche gibt es auf **Deutsch und Englisch**. Umschalten mit **EN / DE** oben rechts –
+die Auswahl wird in einem Cookie gespeichert. Ohne Auswahl gilt die Sprache deines Browsers
+(ersatzweise `general.language`).
+
+Benachrichtigungen, Berichte, Kommandozeile und Log verwenden `general.language` (`en` oder
+`de`), einstellbar unter *Einstellungen → Prüfung & Sprache*.
+
 ## Dashboard
 
-![Dashboard](../assets/screenshots/dashboard.png)
+![Dashboard](../assets/screenshots/de/dashboard.png)
 
 | Spalte | Bedeutung |
 |---|---|
@@ -22,7 +31,7 @@ In der Kopfzeile stehen der Status des Hintergrunddienstes (*nächste Prüfung*)
 
 ## Kartenseite
 
-![Kartenseite](../assets/screenshots/card-detail.png)
+![Kartenseite](../assets/screenshots/de/card-detail.png)
 
 - **Preisverlauf**: Zeitraum 7 T / 30 T / 90 T / 1 J / alles; mit der Maus über einen Punkt
   fahren zeigt den genauen Wert. Linien: dein gefilterter Tiefstpreis, Cardmarket-Trend,
@@ -32,7 +41,7 @@ In der Kopfzeile stehen der Status des Hintergrunddienstes (*nächste Prüfung*)
 
 ## Karten anlegen und bearbeiten
 
-![Karte bearbeiten](../assets/screenshots/card-edit.png)
+![Karte bearbeiten](../assets/screenshots/de/card-edit.png)
 
 Jedes Filter- und Alarmfeld kann sein:
 
@@ -50,7 +59,7 @@ erhalten bleibt. Beim Löschen kann der Verlauf optional mitgelöscht werden.
 
 ## Einstellungen
 
-Enthält: Standardwerte für alle Karten (Filter und Alarme), Prüfzeitplan, Datenquelle,
+Enthält: Standardwerte für alle Karten (Filter und Alarme), Prüfzeitplan, Sprache der Nachrichten, Datenquelle,
 Bericht und Auto-Kauf. Felder, die aus Umgebungsvariablen kommen, sind gesperrt und mit
 `${ENV}` markiert.
 

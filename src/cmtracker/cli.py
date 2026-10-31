@@ -1,4 +1,4 @@
-"""Kommandozeile: ``cmtracker <befehl>``."""
+"""Command line: ``cmtracker <command>``."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from datetime import timedelta
 from . import __version__
 from .config import AppConfig, ConfigError, load_config
 from .formatting import describe_offer, eur, local_time, pct
+from .i18n import _, set_language
 from .models import utcnow
 
 log = logging.getLogger("cmtracker")
@@ -36,25 +37,41 @@ def _app(cfg: AppConfig):
     return App(cfg)
 
 
-# ---------------------------------------------------------------------- Befehle
+# ---------------------------------------------------------------------- Commands
 
 
 def cmd_validate(cfg: AppConfig, args: argparse.Namespace) -> int:
-    print(f"✔ Konfiguration gültig – Provider: {cfg.provider.type}, {len(cfg.cards)} Karten")
+    print(
+        "✔ "
+        + _("Configuration valid – provider: {provider}, {n} cards").format(
+            provider=cfg.provider.type, n=len(cfg.cards)
+        )
+    )
     for card in cfg.cards:
         f = cfg.card_filters(card)
         a = cfg.card_alerts(card)
-        state = "" if card.enabled else " (deaktiviert)"
+        state = "" if card.enabled else " " + _("(disabled)")
         print(f"  • {card.key}{state}: {card.name}")
-        print(f"      Filter: {f.model_dump(exclude_none=True) or '-'}")
-        print(f"      Alerts: {a.model_dump(exclude_none=True)}")
+        print(f"      {_('Filters')}: {f.model_dump(exclude_none=True) or '-'}")
+        print(f"      {_('Alerts')}: {a.model_dump(exclude_none=True)}")
         if card.buy.enabled:
-            print(f"      Kauf:   bis {eur(card.buy.max_price)}, {card.buy.quantity} Stück")
-    print(f"  Benachrichtigungen: {[n.type for n in cfg.notifications] or ['console']}")
+            print(
+                "      "
+                + _("Buy: up to {price}, {qty} pcs.").format(
+                    price=eur(card.buy.max_price), qty=card.buy.quantity
+                )
+            )
+    channels = [n.type for n in cfg.notifications] or ["console"]
+    print("  " + _("Notifications: {channels}").format(channels=", ".join(channels)))
     p = cfg.purchasing
     print(
-        f"  Auto-Kauf: {'AN' if p.enabled else 'aus'} (Modus {p.mode}, "
-        f"max {eur(p.max_per_run)}/Lauf, {eur(p.max_per_month)}/Monat)"
+        "  "
+        + _("Auto-buy: {state} (mode {mode}, max {run}/check, {month}/month)").format(
+            state=_("ON") if p.enabled else _("off"),
+            mode=p.mode,
+            run=eur(p.max_per_run),
+            month=eur(p.max_per_month),
+        )
     )
     return 0
 
@@ -72,11 +89,16 @@ def cmd_check(cfg: AppConfig, args: argparse.Namespace) -> int:
         s = r.snapshot
         assert s is not None
         print(
-            f"✔ {r.card_key}: {s.offer_count}/{s.total_offer_count} Angebote, "
-            f"ab {eur(s.min_price)}, Trend {eur(s.price_guide.trend)}"
+            f"✔ {r.card_key}: "
+            + _("{matching}/{total} offers, from {price}, trend {trend}").format(
+                matching=s.offer_count,
+                total=s.total_offer_count,
+                price=eur(s.min_price),
+                trend=eur(s.price_guide.trend),
+            )
         )
         if s.cheapest:
-            print(f"    günstigstes: {describe_offer(s.cheapest)}")
+            print("    " + _("cheapest: {offer}").format(offer=describe_offer(s.cheapest)))
         for a in r.alerts_sent:
             print(f"    🔔 {a.reason}")
         for decision, result in r.purchases:
@@ -92,15 +114,15 @@ def _serve(cfg: AppConfig, args: argparse.Namespace, schedule: bool) -> int:
     host = args.host or cfg.web.host
     port = args.port or cfg.web.port
     if web_enabled and host not in ("127.0.0.1", "localhost", "::1") and not cfg.web.password:
-        log.warning("Weboberfläche auf %s ohne Passwort erreichbar – web.password setzen!", host)
+        log.warning(_("Web UI reachable on %s without a password – set web.password!"), host)
     if not web_enabled:
         if not schedule:
-            print("✘ Weboberfläche ist deaktiviert (web.enabled: false).", file=sys.stderr)
+            print("✘ " + _("The web UI is disabled (web.enabled: false)."), file=sys.stderr)
             return 2
         stop = threading.Event()
 
         def handle(signum, frame):  # noqa: ARG001
-            log.info("Signal %s empfangen – beende…", signum)
+            log.info(_("Received signal %s – shutting down…"), signum)
             stop.set()
 
         signal.signal(signal.SIGTERM, handle)
@@ -114,9 +136,9 @@ def _serve(cfg: AppConfig, args: argparse.Namespace, schedule: bool) -> int:
 
     runner.start()
     try:
-        serve(args.config, runner, host, port)  # beendet sich bei SIGINT/SIGTERM
+        serve(args.config, runner, host, port)  # returns on SIGINT/SIGTERM
     finally:
-        log.info("Beende Hintergrunddienst…")
+        log.info(_("Stopping background service…"))
         runner.stop()
     return 0
 
@@ -135,7 +157,7 @@ def cmd_report(cfg: AppConfig, args: argparse.Namespace) -> int:
         path = app.run_report(send=args.send)
     finally:
         app.close()
-    print(f"Bericht: {path}")
+    print(_("Report: {path}").format(path=path))
     return 0
 
 
@@ -147,14 +169,14 @@ def cmd_test_notify(cfg: AppConfig, args: argparse.Namespace) -> int:
     for event in ("alert", "report", "purchase", "error"):
         ok += hub.send(
             Notification(
-                f"Test ({event})",
-                "Testnachricht vom Cardmarket Tracker – die Verbindung funktioniert. ✔",
+                _("Test ({event})").format(event=event),
+                _("Test message from Cardmarket Tracker – the connection works. ✔"),
                 event=event,
                 url="https://www.cardmarket.com",
             )
         )
     hub.close()
-    print(f"{ok} Testnachrichten zugestellt (Details siehe Log).")
+    print(_("{n} test messages delivered (see log for details).").format(n=ok))
     return 0 if ok else 1
 
 
@@ -164,9 +186,9 @@ def cmd_history(cfg: AppConfig, args: argparse.Namespace) -> int:
     storage = Storage(cfg.general.database)
     rows = storage.history(args.card, utcnow() - timedelta(days=args.days))
     if not rows:
-        print("Keine Daten.")
+        print(_("No data."))
         return 1
-    print(f"{'Zeitpunkt':<17} {'Tiefst':>11} {'Ø5':>11} {'Trend':>11} {'Δ':>9} {'Angeb.':>7}")
+    print(f"{_('Time'):<17} {_('Low'):>11} {'Ø5':>11} {_('Trend'):>11} {'Δ':>9} {_('Offers'):>7}")
     prev = None
     for s in rows:
         delta = None
@@ -189,7 +211,7 @@ def cmd_export(cfg: AppConfig, args: argparse.Namespace) -> int:
     storage = Storage(cfg.general.database)
     n = export_csv(storage, args.card, args.output)
     storage.close()
-    print(f"{n} Datenpunkte nach {args.output} exportiert.")
+    print(_("Exported {n} data points to {path}.").format(n=n, path=args.output))
     return 0
 
 
@@ -199,7 +221,7 @@ def cmd_purchases(cfg: AppConfig, args: argparse.Namespace) -> int:
     storage = Storage(cfg.general.database)
     rows = storage.purchases(args.limit)
     if not rows:
-        print("Noch keine Käufe (oder simulierten Käufe).")
+        print(_("No purchases (or simulated purchases) yet."))
     for p in rows:
         print(
             f"{local_time(p.created_at, cfg.general.timezone)}  {p.status:<10} {p.mode:<8} "
@@ -214,7 +236,11 @@ def cmd_serve(cfg: AppConfig, args: argparse.Namespace) -> int:
     os.makedirs(directory, exist_ok=True)
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=directory)
     server = http.server.ThreadingHTTPServer((args.host, args.port), handler)
-    print(f"Berichte unter http://{args.host}:{args.port}/latest.html (Strg+C zum Beenden)")
+    print(
+        _("Reports at {url} (Ctrl+C to stop)").format(
+            url=f"http://{args.host}:{args.port}/latest.html"
+        )
+    )
     with contextlib.suppress(KeyboardInterrupt):
         server.serve_forever()
     return 0
@@ -224,39 +250,39 @@ def cmd_serve(cfg: AppConfig, args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="cmtracker", description="Cardmarket Preis-Tracker")
+    p = argparse.ArgumentParser(prog="cmtracker", description="Cardmarket price tracker")
     p.add_argument(
         "-c",
         "--config",
         default=os.environ.get("CMTRACKER_CONFIG", "config.yaml"),
-        help="Pfad zur config.yaml (Standard: $CMTRACKER_CONFIG oder ./config.yaml)",
+        help="path to config.yaml (default: $CMTRACKER_CONFIG or ./config.yaml)",
     )
     p.add_argument("--log-level", help="DEBUG, INFO, WARNING, ...")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
-    s = sub.add_parser("run", help="Dauerbetrieb: Zeitplan + Weboberfläche")
-    s.add_argument("--no-web", action="store_true", help="ohne Weboberfläche")
-    s.add_argument("--host", help="Adresse der Weboberfläche (Standard: web.host)")
-    s.add_argument("--port", type=int, help="Port der Weboberfläche (Standard: web.port)")
-    s = sub.add_parser("web", help="Nur Weboberfläche (Prüfungen nur manuell)")
-    s.add_argument("--host", help="Adresse (Standard: web.host)")
-    s.add_argument("--port", type=int, help="Port (Standard: web.port)")
-    s = sub.add_parser("check", help="Einmalige Prüfung")
-    s.add_argument("--card", action="append", help="Nur diese Karte(n) (Key), mehrfach möglich")
-    s = sub.add_parser("report", help="Bericht erzeugen")
-    s.add_argument("--send", action="store_true", help="Zusammenfassung auch verschicken")
-    sub.add_parser("validate", help="Konfiguration prüfen und anzeigen")
-    sub.add_parser("test-notify", help="Testnachricht an alle Kanäle senden")
-    s = sub.add_parser("history", help="Preisverlauf einer Karte anzeigen")
-    s.add_argument("card", help="Karten-Key")
+    s = sub.add_parser("run", help="continuous operation: schedule + web UI")
+    s.add_argument("--no-web", action="store_true", help="without web UI")
+    s.add_argument("--host", help="web UI address (default: web.host)")
+    s.add_argument("--port", type=int, help="web UI port (default: web.port)")
+    s = sub.add_parser("web", help="web UI only (checks only on demand)")
+    s.add_argument("--host", help="address (default: web.host)")
+    s.add_argument("--port", type=int, help="port (default: web.port)")
+    s = sub.add_parser("check", help="check once")
+    s.add_argument("--card", action="append", help="only this card key (repeatable)")
+    s = sub.add_parser("report", help="generate report")
+    s.add_argument("--send", action="store_true", help="also send the summary")
+    sub.add_parser("validate", help="validate and show configuration")
+    sub.add_parser("test-notify", help="send a test message to all channels")
+    s = sub.add_parser("history", help="show price history of a card")
+    s.add_argument("card", help="card key")
     s.add_argument("--days", type=int, default=30)
-    s = sub.add_parser("export", help="Preisverlauf als CSV exportieren")
-    s.add_argument("card", help="Karten-Key")
+    s = sub.add_parser("export", help="export price history as CSV")
+    s.add_argument("card", help="card key")
     s.add_argument("-o", "--output", default="history.csv")
-    s = sub.add_parser("purchases", help="(Simulierte) Käufe anzeigen")
+    s = sub.add_parser("purchases", help="show (simulated) purchases")
     s.add_argument("--limit", type=int, default=50)
-    s = sub.add_parser("serve", help="Berichte per HTTP ausliefern")
+    s = sub.add_parser("serve", help="serve the report directory via HTTP")
     s.add_argument("--host", default="0.0.0.0")
     s.add_argument("--port", type=int, default=8080)
     return p
@@ -278,6 +304,7 @@ COMMANDS = {
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    set_language(os.environ.get("CMTRACKER_LANGUAGE"))
     if args.command in ("run", "web"):
         from .runtime import ensure_config
 
@@ -287,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as exc:
         print(f"✘ {exc}", file=sys.stderr)
         return 2
+    set_language(cfg.general.language)
     _setup_logging(args.log_level or cfg.general.log_level)
     return COMMANDS[args.command](cfg, args)
 

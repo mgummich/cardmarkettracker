@@ -1,12 +1,12 @@
 # Troubleshooting & FAQ
 
-## The web UI shows "config.yaml ist fehlerhaft"
+## The web UI shows "config.yaml is invalid"
 
 The file contains an error (YAML syntax or invalid value). The message names the field, e.g.
 `cards.2.alerts.max_price`. The last valid configuration keeps running. Fix the file or restore
 `config.yaml.bak`. `cmtracker validate` shows the same messages.
 
-## "Umgebungsvariable X ist nicht gesetzt"
+## "Environment variable X is not set"
 
 The config references `${X}` without default and `X` is not set. Add it to `.env` (and restart
 the container) or use `${X:-}` for an optional empty value.
@@ -15,21 +15,21 @@ the container) or use `${X:-}` for an optional empty value.
 
 The container user (UID 1000) cannot write to `config/`: `sudo chown -R 1000:1000 config data`.
 
-## Forms fail with "Ungültige Herkunft der Anfrage (CSRF-Schutz)"
+## Forms fail with "Invalid request origin (CSRF protection)"
 
 Your reverse proxy changes the `Host` header. Pass it through
 (nginx: `proxy_set_header Host $host;`).
 
-## A card shows "Fehler"
+## A card shows "error"
 
 The error message is shown on the card page. Common causes:
 
 | Message | Cause / fix |
 |---|---|
-| `Authentifizierung fehlgeschlagen (401/403)` | wrong or revoked API tokens |
-| `Tageslimit an Requests erreicht (429)` | too many requests – increase `interval_minutes` |
-| `HTTP 403 (Bot-Schutz/Rate-Limit)` | scraper blocked by Cloudflare – longer intervals or use the API |
-| `Produkt … nicht gefunden` | wrong `product_id` |
+| `authentication failed (401/403)` | wrong or revoked API tokens |
+| `daily request limit reached (429)` | too many requests – increase `interval_minutes` |
+| `HTTP 403 (bot protection / rate limit)` | scraper blocked by Cloudflare – longer intervals or use the API |
+| `Product … not found` | wrong `product_id` |
 
 Enable `general.notify_errors` to be informed about errors by message.
 
@@ -51,6 +51,12 @@ Try relaxing `seller_countries`, `languages` or `min_condition`.
 It is sent once per day after `reports.daily_time` (local time zone), only by `cmtracker run`
 and only when at least one card is configured. If the tracker starts after that time, the
 report is sent right away.
+
+## Messages or the interface are in the wrong language
+
+The web UI uses the EN/DE switch (cookie), otherwise your browser language. Notifications,
+reports, CLI and log use `general.language`. Alerts already stored keep the language they
+were sent in.
 
 ## Are shipping costs included?
 

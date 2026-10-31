@@ -49,8 +49,11 @@ mkdocs build --strict       # wenn du die Doku geändert hast
 
 - Python ≥ 3.11, formatiert und geprüft mit ruff (Zeilenlänge 100).
 - Typannotationen für öffentliche Funktionen.
-- Texte für Nutzer (Nachrichten, Weboberfläche) sind derzeit deutsch; Code, Kommentare in
-  neuen Modulen und Commit-Nachrichten dürfen englisch oder deutsch sein.
+- Texte für Nutzer werden **englisch** geschrieben und mit `_()` markiert
+  (`_("{n} cards").format(n=3)`, in Templates `{{ _("Save") }}`). Die deutsche Übersetzung
+  kommt in `src/cmtracker/locales/de.py`. Der Test `tests/test_i18n.py` meldet fehlende
+  Übersetzungen und abweichende Platzhalter.
+- Code, Kommentare und Commit-Nachrichten dürfen englisch oder deutsch sein.
 - Keine neue Laufzeit-Abhängigkeit ohne guten Grund.
 
 ## Dokumentation

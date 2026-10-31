@@ -1,83 +1,83 @@
 {% extends "base.html" %}
 {% from "_fields.html" import filter_fields, alert_fields, env_badge %}
-{% block title %}{{ 'Neue Karte' if is_new else 'Karte bearbeiten' }}{% endblock %}
+{% block title %}{{ _("New card") if is_new else _("Edit card") }}{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>{{ 'Neue Karte' if is_new else v.name ~ ' bearbeiten' }}</h1>
-  {% if not is_new %}<a class="btn" href="/cards/{{ key }}">← zurück</a>{% endif %}
+  <h1>{{ _("New card") if is_new else _("Edit {name}").format(name=v.name) }}</h1>
+  {% if not is_new %}<a class="btn" href="/cards/{{ key }}">← {{ _("back") }}</a>{% endif %}
 </div>
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
 <form method="post" data-dirty-guard>
   <fieldset>
-    <legend>Karte</legend>
+    <legend>{{ _("Card") }}</legend>
     <div class="fields">
-      <div class="field {{ 'error' if error_field == 'name' }}"><label>Name *</label>
-        <input type="text" name="name" value="{{ v.name }}" required placeholder="z.B. The One Ring (LTR)" {{ 'disabled' if 'name' in v._env }}></div>
-      <div class="field"><label>Spiel</label>
+      <div class="field {{ 'error' if error_field == 'name' }}"><label>{{ _("Name") }} *</label>
+        <input type="text" name="name" value="{{ v.name }}" required placeholder="{{ _('e.g. The One Ring (LTR)') }}" {{ 'disabled' if 'name' in v._env }}></div>
+      <div class="field"><label>{{ _("Game") }}</label>
         <input type="text" name="game" value="{{ v.game }}" list="games" {{ 'disabled' if 'game' in v._env }}>
         <datalist id="games"><option>Magic</option><option>Pokemon</option><option>YuGiOh</option><option>OnePiece</option><option>Lorcana</option><option>FleshAndBlood</option><option>StarWarsUnlimited</option><option>DragonBallSuper</option></datalist></div>
       {% if is_new %}
-      <div class="field {{ 'error' if error_field == 'key' }}"><label>Key (optional)</label>
-        <input type="text" name="key" value="{{ v.key }}" placeholder="wird aus dem Namen erzeugt">
-        <div class="hint">Eindeutiger Kurzname; nötig, wenn dieselbe Karte mehrfach mit anderen Filtern getrackt wird</div></div>
+      <div class="field {{ 'error' if error_field == 'key' }}"><label>{{ _("Key (optional)") }}</label>
+        <input type="text" name="key" value="{{ v.key }}" placeholder="{{ _('generated from the name') }}">
+        <div class="hint">{{ _("Unique short name; needed when tracking the same card several times with different filters") }}</div></div>
       {% else %}
-      <div class="field"><label>Key</label><input type="text" value="{{ key }}" disabled>
-        <div class="hint">Fest, damit der Preisverlauf zugeordnet bleibt</div></div>
+      <div class="field"><label>{{ _("Key") }}</label><input type="text" value="{{ key }}" disabled>
+        <div class="hint">{{ _("Fixed so the price history stays attached") }}</div></div>
       {% endif %}
     </div>
     <div class="fields">
-      <div class="field {{ 'error' if error_field == 'product_id' }}"><label>Produkt-ID {{ env_badge('product_id' in v._env) }}{% if cfg.provider.type == 'mkm_api' %} *{% endif %}</label>
+      <div class="field {{ 'error' if error_field == 'product_id' }}"><label>{{ _("Product ID") }} {{ env_badge('product_id' in v._env) }}{% if cfg.provider.type == 'mkm_api' %} *{% endif %}</label>
         <input type="text" inputmode="numeric" name="product_id" value="{{ v.product_id }}" {{ 'disabled' if 'product_id' in v._env }}>
-        <div class="hint">Für die Cardmarket-API{% if cfg.provider.type == 'mkm_api' %} (Pflicht){% endif %}</div></div>
-      <div class="field" style="grid-column: span 2"><label>Cardmarket-URL {{ env_badge('url' in v._env) }}{% if cfg.provider.type == 'scraper' %} *{% endif %}</label>
-        <input type="url" name="url" value="{{ v.url }}" placeholder="https://www.cardmarket.com/de/Magic/Products/Singles/…" {{ 'disabled' if 'url' in v._env }}>
-        <div class="hint">Link zur Produktseite{% if cfg.provider.type == 'scraper' %} (Pflicht für den Scraper){% endif %}</div></div>
+        <div class="hint">{{ _("For the Cardmarket API") }}{% if cfg.provider.type == 'mkm_api' %} ({{ _("required") }}){% endif %}</div></div>
+      <div class="field" style="grid-column: span 2"><label>{{ _("Cardmarket URL") }} {{ env_badge('url' in v._env) }}{% if cfg.provider.type == 'scraper' %} *{% endif %}</label>
+        <input type="url" name="url" value="{{ v.url }}" placeholder="https://www.cardmarket.com/en/Magic/Products/Singles/…" {{ 'disabled' if 'url' in v._env }}>
+        <div class="hint">{{ _("Link to the product page") }}{% if cfg.provider.type == 'scraper' %} ({{ _("required for the scraper") }}){% endif %}</div></div>
     </div>
-    <div class="field"><label>Notiz</label><input type="text" name="notes" value="{{ v.notes }}" placeholder="z.B. für Commander-Deck"></div>
+    <div class="field"><label>{{ _("Note") }}</label><input type="text" name="notes" value="{{ v.notes }}" placeholder="{{ _('e.g. for my Commander deck') }}"></div>
     <input type="hidden" name="enabled" value="0">
-    <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if v.enabled }}> Aktiv (wird regelmäßig geprüft)</label>
+    <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if v.enabled }}> {{ _("Active (checked regularly)") }}</label>
   </fieldset>
 
   <fieldset>
-    <legend>Preisalarme</legend>
-    <p class="muted small" style="margin-top:0">Grau angezeigte Werte sind die Standardwerte aus den <a href="/settings#defaults">Einstellungen</a>.</p>
+    <legend>{{ _("Price alerts") }}</legend>
+    <p class="muted small" style="margin-top:0">{{ _("Greyed-out values are the defaults from") }} <a href="/settings#defaults">{{ _("Settings") }}</a>.</p>
     {{ alert_fields('a_', v.alerts, true, defaults_alerts) }}
   </fieldset>
 
   <fieldset>
-    <legend>Filter – welche Angebote zählen?</legend>
+    <legend>{{ _("Filters – which offers count?") }}</legend>
     {{ filter_fields('f_', v.filters, true, defaults_filters) }}
   </fieldset>
 
   <fieldset>
-    <legend>Auto-Kauf (experimentell)</legend>
-    {% if not cfg.purchasing.enabled %}<div class="flash warn">Auto-Kauf ist global ausgeschaltet – Einstellungen hier werden erst wirksam, wenn du ihn unter <a href="/settings#purchasing">Einstellungen</a> aktivierst.</div>{% endif %}
+    <legend>{{ _("Auto-buy (experimental)") }}</legend>
+    {% if not cfg.purchasing.enabled %}<div class="flash warn">{{ _("Auto-buy is switched off globally – these settings only take effect once you enable it in") }} <a href="/settings#purchasing">{{ _("Settings") }}</a>.</div>{% endif %}
     <input type="hidden" name="b_enabled" value="0">
-    <label class="check"><input type="checkbox" name="b_enabled" value="1" {{ 'checked' if v.buy.enabled }}> Für diese Karte automatisch kaufen</label>
+    <label class="check"><input type="checkbox" name="b_enabled" value="1" {{ 'checked' if v.buy.enabled }}> {{ _("Buy this card automatically") }}</label>
     <div class="fields" style="margin-top:12px">
-      <div class="field {{ 'error' if error_field == 'buy.max_price' }}"><label>Max. Kaufpreis (€)</label><input type="text" inputmode="decimal" name="b_max_price" value="{{ v.buy.max_price }}"></div>
-      <div class="field"><label>Stückzahl</label><input type="number" min="1" name="b_quantity" value="{{ v.buy.quantity }}"></div>
+      <div class="field {{ 'error' if error_field == 'buy.max_price' }}"><label>{{ _("Max. buy price (€)") }}</label><input type="text" inputmode="decimal" name="b_max_price" value="{{ v.buy.max_price }}"></div>
+      <div class="field"><label>{{ _("Quantity") }}</label><input type="number" min="1" name="b_quantity" value="{{ v.buy.quantity }}"></div>
     </div>
     <details>
-      <summary class="small" style="cursor:pointer">Zusätzliche Filter nur für den Kauf (z.B. strengerer Zustand, nur DE)</summary>
-      <div style="margin-top:12px">{{ filter_fields('bf_', v.buy.filters, true, none, 'Filter der Karte') }}</div>
-      <p class="muted small">„Standard“ heißt hier: es gelten die Filter der Karte.</p>
+      <summary class="small" style="cursor:pointer">{{ _("Additional filters for buying only (e.g. stricter condition, only DE)") }}</summary>
+      <div style="margin-top:12px">{{ filter_fields('bf_', v.buy.filters, true, none, _('Card filters')) }}</div>
+      <p class="muted small">{{ _("“Default” means: the card's filters apply.") }}</p>
     </details>
   </fieldset>
 
   <div class="form-actions">
-    <button class="btn primary" type="submit">{{ 'Karte anlegen' if is_new else 'Speichern' }}</button>
-    <a class="btn" href="{{ '/' if is_new else '/cards/' ~ key }}">Abbrechen</a>
+    <button class="btn primary" type="submit">{{ _("Create card") if is_new else _("Save") }}</button>
+    <a class="btn" href="{{ '/' if is_new else '/cards/' ~ key }}">{{ _("Cancel") }}</a>
   </div>
 </form>
 
 {% if not is_new %}
 <section class="box" style="margin-top:28px">
-  <h2>Karte löschen</h2>
-  <form method="post" action="/cards/{{ key }}/delete" data-confirm="Karte wirklich löschen?">
-    <label class="check"><input type="checkbox" name="purge" value="1"> Auch Preisverlauf, Alerts und Käufe löschen</label>
-    <p><button class="btn danger" type="submit">🗑 Löschen</button></p>
+  <h2>{{ _("Delete card") }}</h2>
+  <form method="post" action="/cards/{{ key }}/delete" data-confirm="{{ _('Really delete this card?') }}">
+    <label class="check"><input type="checkbox" name="purge" value="1"> {{ _("Also delete price history, alerts and purchases") }}</label>
+    <p><button class="btn danger" type="submit">🗑 {{ _("Delete") }}</button></p>
   </form>
 </section>
 {% endif %}

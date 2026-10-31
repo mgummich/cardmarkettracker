@@ -3,15 +3,19 @@
 {%- endmacro %}
 
 {% macro state_badge(state) -%}
-{% set labels = {'ok': 'aktiv', 'hit': 'Ziel erreicht', 'error': 'Fehler', 'new': 'neu', 'paused': 'pausiert'} %}
+{% set labels = {'ok': _('active'), 'hit': _('target reached'), 'error': _('error'), 'new': _('new'), 'paused': _('paused')} %}
 <span class="badge {{ state }}">{{ labels[state] }}</span>
 {%- endmacro %}
 
 {% macro purchase_badge(status) -%}
-{% set labels = {'simulated': 'simuliert', 'in_cart': 'im Warenkorb', 'ordered': 'gekauft', 'failed': 'fehlgeschlagen'} %}
+{% set labels = {'simulated': _('simulated'), 'in_cart': _('in cart'), 'ordered': _('bought'), 'failed': _('failed')} %}
 <span class="badge {{ status }}">{{ labels.get(status, status) }}</span>
 {%- endmacro %}
 
 {% macro extras(o) -%}
-{{ [o.foil and 'Foil', o.signed and 'signiert', o.altered and 'altered', o.first_edition and '1. Ed.']|select|join(', ') or '–' }}
+{{ [o.foil and _('Foil'), o.signed and _('signed'), o.altered and _('altered'), o.first_edition and _('1st ed.')]|select|join(', ') or '–' }}
+{%- endmacro %}
+
+{% macro target_distance(r) -%}
+{% if r.to_target is not none %}{{ _('reached ✔') if r.to_target <= 0 else _('{pct} above').format(pct=r.to_target|pct(false)) }}{% endif %}
 {%- endmacro %}

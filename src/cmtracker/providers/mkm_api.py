@@ -1,4 +1,4 @@
-"""Offizielle Cardmarket-API (MKM API v2.0, OAuth 1.0a)."""
+"""Official Cardmarket API (MKM API v2.0, OAuth 1.0a)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import httpx
 
 from ..config import CardConfig, MkmApiConfig, OfferFilter
 from ..constants import LANGUAGE_IDS, normalize_country, normalize_language
+from ..i18n import _
 from ..models import MarketData, Offer, PriceGuide
 from .base import PriceProvider, ProviderError
 from .oauth import build_auth_header
@@ -117,17 +118,20 @@ class MkmApiClient:
                 method, url, params=str_params or None, content=content, headers=headers
             )
         except httpx.HTTPError as exc:
-            raise ProviderError(f"Netzwerkfehler bei Cardmarket-API: {exc}") from exc
+            raise ProviderError(
+                _("Network error talking to the Cardmarket API: {error}").format(error=exc)
+            ) from exc
 
         if resp.status_code == 204:
             return None, 204
         if resp.status_code in (401, 403):
             raise ProviderError(
-                f"Cardmarket-API: Authentifizierung fehlgeschlagen ({resp.status_code}). "
-                "Tokens prüfen."
+                _("Cardmarket API: authentication failed ({status}). Check your tokens.").format(
+                    status=resp.status_code
+                )
             )
         if resp.status_code == 429:
-            raise ProviderError("Cardmarket-API: Tageslimit an Requests erreicht (429).")
+            raise ProviderError(_("Cardmarket API: daily request limit reached (429)."))
         if resp.status_code >= 400:
             raise ProviderError(
                 f"Cardmarket-API {method} {path}: HTTP {resp.status_code} {resp.text[:200]}"
@@ -135,12 +139,12 @@ class MkmApiClient:
         try:
             return resp.json(), resp.status_code
         except ValueError as exc:
-            raise ProviderError("Cardmarket-API lieferte kein gültiges JSON") from exc
+            raise ProviderError(_("Cardmarket API returned invalid JSON")) from exc
 
     def get_product(self, product_id: int) -> dict[str, Any]:
-        data, _ = self.request("GET", f"products/{product_id}")
+        data, _status = self.request("GET", f"products/{product_id}")
         if not data or "product" not in data:
-            raise ProviderError(f"Produkt {product_id} nicht gefunden")
+            raise ProviderError(_("Product {id} not found").format(id=product_id))
         return data["product"]
 
     def get_articles(
@@ -168,7 +172,7 @@ class MkmApiClient:
             f"<article><idArticle>{escape(str(article_id))}</idArticle>"
             f"<amount>{int(amount)}</amount></article></request>"
         )
-        data, _ = self.request("PUT", "shoppingcart", content=body)
+        data, _status = self.request("PUT", "shoppingcart", content=body)
         return data
 
 
@@ -195,7 +199,7 @@ class MkmApiProvider(PriceProvider):
 
     def fetch(self, card: CardConfig, filters: OfferFilter) -> MarketData:
         if card.product_id is None:
-            raise ProviderError(f"Karte '{card.name}' hat keine product_id")
+            raise ProviderError(_("Card '{name}' has no product_id").format(name=card.name))
         product = self.client.get_product(card.product_id)
         raw = self.client.get_articles(
             card.product_id, article_query_params(filters), self.cfg.max_articles
@@ -205,7 +209,7 @@ class MkmApiProvider(PriceProvider):
             try:
                 offers.append(parse_article(a))
             except (KeyError, TypeError, ValueError) as exc:
-                log.debug("Artikel übersprungen (%s): %s", exc, a)
+                log.debug("Skipped article (%s): %s", exc, a)
         website = product.get("website")
         return MarketData(
             offers=offers,

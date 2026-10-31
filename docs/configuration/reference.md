@@ -31,6 +31,7 @@ Fields that use variables are read-only in the web UI.
 
 | Key | Default | Description |
 |---|---|---|
+| `language` | `en` | `en` or `de` – language of notifications, reports, CLI and log. The web UI uses the browser language or the EN/DE switch. |
 | `interval_minutes` | `60` | minutes between two checks of all cards (≥ 1) |
 | `jitter_seconds` | `60` | random extra delay per interval, so requests are not perfectly periodic |
 | `database` | `data/tracker.db` | SQLite file |

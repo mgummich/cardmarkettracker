@@ -50,8 +50,12 @@ mkdocs build --strict       # if you changed the docs
 
 - Python ≥ 3.11, formatted and linted with ruff (line length 100).
 - Type hints for public functions.
-- User-facing texts (messages, web UI) are currently German; code, comments in new modules
-  and commit messages may be English or German.
+- User-facing texts are written in **English** and wrapped in `_()`
+  (`_("{n} cards").format(n=3)`, in templates `{{ _("Save") }}`). Add the German translation
+  to `src/cmtracker/locales/de.py`; `tests/test_i18n.py` reports missing translations and
+  mismatching placeholders. New languages: add `locales/<code>.py` and register it in
+  `cmtracker/i18n.py`.
+- Code, comments and commit messages may be English or German.
 - No new runtime dependency without a good reason.
 
 ## Documentation

@@ -1,18 +1,20 @@
-"""Schlanke SVG-Liniendiagramme ohne externe Abhängigkeiten."""
+"""Lightweight SVG line charts without external dependencies."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from html import escape
 
-from ..formatting import eur
+from ..formatting import eur, local_time
+from ..i18n import _
 
 Series = list[tuple[datetime, float | None]]
 
+# series id -> (colour, dash pattern, label)
 SERIES_STYLE = {
-    "Tiefstpreis (gefiltert)": ("var(--c1)", ""),
-    "Preistrend": ("var(--c2)", "5 4"),
-    "30-Tage-Ø": ("var(--c3)", "2 3"),
+    "low": ("var(--c1)", "", "Low (filtered)"),
+    "trend": ("var(--c2)", "5 4", "Price trend"),
+    "avg30": ("var(--c3)", "2 3", "30-day avg."),
 }
 
 
@@ -22,18 +24,19 @@ def line_chart(
     height: int = 220,
     hover_series: str | None = None,
     reference_line: tuple[str, float] | None = None,
+    tz: str = "UTC",
 ) -> str:
-    """Liniendiagramm. ``hover_series`` erhält Punkte mit Tooltip, ``reference_line``
-    zeichnet eine waagrechte Linie (z.B. Zielpreis)."""
+    """Line chart. ``series`` maps ids from ``SERIES_STYLE`` to points; ``hover_series``
+    gets points with tooltips, ``reference_line`` draws a horizontal line (target price)."""
     points = [(t, v) for s in series.values() for t, v in s if v is not None]
     if len(points) < 2:
-        return '<p class="muted">Noch zu wenige Datenpunkte für ein Diagramm.</p>'
+        return '<p class="muted">' + escape(_("Not enough data points for a chart yet.")) + "</p>"
 
     pad_l, pad_r, pad_t, pad_b = 64, 12, 12, 28
-    t_min = min(t for t, _ in points).timestamp()
-    t_max = max(t for t, _ in points).timestamp()
-    v_min = min(v for _, v in points)
-    v_max = max(v for _, v in points)
+    t_min = min(t for t, _v in points).timestamp()
+    t_max = max(t for t, _v in points).timestamp()
+    v_min = min(v for _t, v in points)
+    v_max = max(v for _t, v in points)
     if reference_line:
         v_min = min(v_min, reference_line[1])
         v_max = max(v_max, reference_line[1])
@@ -51,7 +54,8 @@ def line_chart(
         return pad_t + (1 - (v - v_min) / span_v) * plot_h
 
     parts = [
-        f'<svg viewBox="0 0 {width} {height}" class="chart" role="img" aria-label="Preisverlauf">'
+        f'<svg viewBox="0 0 {width} {height}" class="chart" role="img" '
+        f'aria-label="{escape(_("Price history"))}">'
     ]
     for i in range(5):
         v = v_min + span_v * i / 4
@@ -61,24 +65,24 @@ def line_chart(
             f'<text x="{pad_l - 6}" y="{yy + 4:.1f}" class="axis" text-anchor="end">'
             f"{escape(eur(v))}</text>"
         )
-    start = min(t for t, _ in points)
-    end = max(t for t, _ in points)
+    start = min(t for t, _v in points)
+    end = max(t for t, _v in points)
     parts.append(
-        f'<text x="{pad_l}" y="{height - 8}" class="axis">{start:%d.%m.}</text>'
+        f'<text x="{pad_l}" y="{height - 8}" class="axis">{local_time(start, tz, "day")}</text>'
         f'<text x="{width - pad_r}" y="{height - 8}" class="axis" text-anchor="end">'
-        f"{end:%d.%m.}</text>"
+        f"{local_time(end, tz, 'day')}</text>"
     )
     for name, data in series.items():
         pts = [(t, v) for t, v in data if v is not None]
         if not pts:
             continue
-        color, dash = SERIES_STYLE.get(name, ("currentColor", ""))
+        color, dash, label = SERIES_STYLE.get(name, ("currentColor", "", name))
         coords = " ".join(f"{x(t):.1f},{y(v):.1f}" for t, v in pts)
         dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
         parts.append(
             f'<polyline points="{coords}" fill="none" stroke="{color}" stroke-width="2"'
             f' stroke-linejoin="round" stroke-linecap="round"{dash_attr}>'
-            f"<title>{escape(name)}</title></polyline>"
+            f"<title>{escape(_(label))}</title></polyline>"
         )
     if reference_line:
         label, value = reference_line
@@ -94,7 +98,7 @@ def line_chart(
                 continue
             parts.append(
                 f'<circle cx="{x(t):.1f}" cy="{y(v):.1f}" r="5" class="pt">'
-                f"<title>{t:%d.%m.%Y %H:%M} · {escape(eur(v))}</title></circle>"
+                f"<title>{local_time(t, tz)} · {escape(eur(v))}</title></circle>"
             )
     parts.append("</svg>")
     return "".join(parts)

@@ -29,4 +29,9 @@ cmtracker export the-one-ring-ltr -o one-ring.csv   # gesamter Verlauf als CSV (
 cmtracker history the-one-ring-ltr --days 14        # Verlauf im Terminal
 ```
 
+CSV-Spalten: `taken_at`, `offers_matching`, `offers_total`, `min_price`, `avg5`, `median`,
+`trend`, `avg1`, `avg7`, `avg30`, `low`.
+
+Der Bericht wird in `general.language` geschrieben.
+
 Für eigene Dashboards (Grafana, Home Assistant, Tabellen) gibt es die [JSON-API](../reference/api.md).

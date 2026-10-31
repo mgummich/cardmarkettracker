@@ -1,12 +1,14 @@
-"""Cardmarket-Stammdaten: Zustände, Sprachen, Länder, Verkäufertypen.
+"""Cardmarket master data: conditions, languages, countries, seller types.
 
-Alle ``normalize_*``-Funktionen akzeptieren gängige Schreibweisen (Deutsch/Englisch,
-Kürzel) und liefern einen kanonischen Wert zurück oder werfen ``ValueError``.
+All ``normalize_*`` functions accept common spellings (English/German, abbreviations)
+and return a canonical value or raise ``ValueError``.
 """
 
 from __future__ import annotations
 
 import re
+
+from .i18n import _, get_language
 
 # Reihenfolge = Qualität absteigend. Index+1 entspricht dem ``minCondition``-Parameter
 # auf cardmarket.com.
@@ -186,7 +188,11 @@ def normalize_condition(value: str) -> str:
         return key
     if key in _CONDITION_ALIASES:
         return _CONDITION_ALIASES[key]
-    raise ValueError(f"Unbekannter Zustand: {value!r} (erlaubt: {', '.join(CONDITIONS)})")
+    raise ValueError(
+        _("Unknown condition: {value} (allowed: {allowed})").format(
+            value=repr(value), allowed=", ".join(CONDITIONS)
+        )
+    )
 
 
 def condition_rank(condition: str) -> int:
@@ -199,14 +205,14 @@ def normalize_language(value: str | int) -> str:
         idx = int(value)
         if idx in LANGUAGES:
             return LANGUAGES[idx]
-        raise ValueError(f"Unbekannte Sprach-ID: {value!r}")
+        raise ValueError(_("Unknown language ID: {value}").format(value=repr(value)))
     text = str(value).strip()
     if text in LANGUAGE_IDS:
         return text
     key = text.lower()
     if key in _LANGUAGE_ALIASES:
         return _LANGUAGE_ALIASES[key]
-    raise ValueError(f"Unbekannte Sprache: {value!r}")
+    raise ValueError(_("Unknown language: {value}").format(value=repr(value)))
 
 
 def normalize_country(value: str) -> str:
@@ -221,17 +227,63 @@ def normalize_country(value: str) -> str:
     for iso, names in COUNTRIES.items():
         if lower in (n.lower() for n in names):
             return iso
-    raise ValueError(f"Unbekanntes Land: {value!r}")
+    raise ValueError(_("Unknown country: {value}").format(value=repr(value)))
 
 
 def normalize_seller_type(value: str | int) -> str:
     key = str(value).strip().lower()
     if key in _SELLER_TYPE_ALIASES:
         return _SELLER_TYPE_ALIASES[key]
-    raise ValueError(f"Unbekannter Verkäufertyp: {value!r} (erlaubt: {', '.join(SELLER_TYPES)})")
+    raise ValueError(
+        _("Unknown seller type: {value} (allowed: {allowed})").format(
+            value=repr(value), allowed=", ".join(SELLER_TYPES)
+        )
+    )
 
 
-def country_name_de(code: str | None) -> str:
+CONDITION_NAMES_EN: dict[str, str] = {
+    "MT": "Mint",
+    "NM": "Near Mint",
+    "EX": "Excellent",
+    "GD": "Good",
+    "LP": "Light Played",
+    "PL": "Played",
+    "PO": "Poor",
+}
+
+LANGUAGE_NAMES_EN: dict[str, str] = {
+    "English": "English",
+    "French": "French",
+    "German": "German",
+    "Spanish": "Spanish",
+    "Italian": "Italian",
+    "S-Chinese": "Chinese (simplified)",
+    "Japanese": "Japanese",
+    "Portuguese": "Portuguese",
+    "Russian": "Russian",
+    "Korean": "Korean",
+    "T-Chinese": "Chinese (traditional)",
+}
+
+
+def condition_name(code: str | None) -> str:
+    """Human-readable condition name (Mint, Near Mint, …)."""
+    return CONDITION_NAMES_EN.get(code or "", code or "–")
+
+
+def language_name(lang: str | None) -> str:
+    """Name of a card language in the active UI language."""
+    if not lang:
+        return "–"
+    names = LANGUAGE_NAMES_DE if get_language() == "de" else LANGUAGE_NAMES_EN
+    return names.get(lang, lang)
+
+
+def country_name(code: str | None) -> str:
+    """Name of a country (ISO-2) in the active UI language."""
     if not code:
         return "?"
-    return COUNTRIES.get(code, (code, code))[1]
+    names = COUNTRIES.get(code)
+    if not names:
+        return code
+    return names[1] if get_language() == "de" else names[0]
