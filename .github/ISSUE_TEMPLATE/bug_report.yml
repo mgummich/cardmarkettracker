@@ -1,0 +1,55 @@
+name: Bug report / Fehlerbericht
+description: Something does not work as expected / Etwas funktioniert nicht wie erwartet
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! English or German is fine. **Please remove tokens, passwords and other secrets from logs and config.**
+        Danke für die Meldung! Deutsch oder Englisch ist okay. **Bitte Tokens, Passwörter und andere Geheimnisse aus Logs und Konfiguration entfernen.**
+        Security issues / Sicherheitslücken: see SECURITY.md – no public issue please.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Was ist passiert?
+      description: Including what you expected instead / inkl. was du stattdessen erwartet hast
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Schritte zum Nachstellen
+      placeholder: |
+        1. …
+        2. …
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`cmtracker --version` or image tag / oder Image-Tag"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation
+      options: [Docker, pip / source, other / andere]
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Data source / Datenquelle
+      options: [mkm_api, scraper, demo]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant log lines / relevante Log-Zeilen (`docker compose logs`)
+      render: text
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration / relevante Konfiguration
+      description: Without secrets! / Ohne Geheimnisse!
+      render: yaml

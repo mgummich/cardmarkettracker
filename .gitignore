@@ -12,3 +12,4 @@ config.yaml
 config.yaml.bak
 /config/
 data/
+site/

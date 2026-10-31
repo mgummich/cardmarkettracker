@@ -1,8 +1,9 @@
 services:
   tracker:
+    # Fertiges Image aus der GitHub Container Registry (amd64/arm64).
+    # Selbst bauen statt herunterladen: docker compose up -d --build
+    image: ghcr.io/mgummich/cardmarkettracker:latest
     build: .
-    # oder fertiges Image aus der GitHub Container Registry:
-    # image: ghcr.io/mgummich/cardmarkettracker:latest
     container_name: cardmarket-tracker
     restart: unless-stopped
     env_file: .env

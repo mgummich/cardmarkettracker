@@ -1,3 +1,3 @@
-"""Cardmarket Tracker – selbst gehosteter Preis-Tracker & Alert-Bot für Cardmarket."""
+"""Cardmarket Tracker – self-hosted price tracker, alert bot and dashboard for Cardmarket."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

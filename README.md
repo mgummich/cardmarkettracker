@@ -1,258 +1,91 @@
+<div align="center">
+
+<img src="docs/assets/logo.svg" width="72" alt="">
+
 # Cardmarket Tracker
 
-Selbst gehosteter Bot, der die Preise ausgewählter Karten auf [Cardmarket](https://www.cardmarket.com)
-überwacht – mit frei einstellbaren Filtern (Sprache, Zustand, Foil, Verkäuferland, …),
-**Alerts bei Preisunterschreitungen**, einem **ausführlichen HTML-Bericht** und einem
-(experimentellen) **Auto-Kauf**-Modul.
+**Self-hosted price tracker, alert bot and dashboard for [Cardmarket](https://www.cardmarket.com)**
 
-![Dashboard](docs/dashboard.png)
+[![CI](https://github.com/mgummich/cardmarkettracker/actions/workflows/ci.yml/badge.svg)](https://github.com/mgummich/cardmarkettracker/actions/workflows/ci.yml)
+[![Docker](https://github.com/mgummich/cardmarkettracker/actions/workflows/docker.yml/badge.svg)](https://github.com/mgummich/cardmarkettracker/pkgs/container/cardmarkettracker)
+[![Docs](https://github.com/mgummich/cardmarkettracker/actions/workflows/docs.yml/badge.svg)](https://mgummich.github.io/cardmarkettracker/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 
-## Funktionen
+[Documentation](https://mgummich.github.io/cardmarkettracker/) ·
+[Dokumentation (Deutsch)](https://mgummich.github.io/cardmarkettracker/de/) ·
+[README auf Deutsch](README.de.md)
 
-- **Weboberfläche** – Dashboard mit allen Karten (Tiefstpreis, Mini-Verlauf, Änderung 24 h/7 T,
-  Abstand zum Zielpreis, Status), Detailseite je Karte mit interaktivem Preisdiagramm,
-  Angeboten, Alerts und Käufen; Karten, Filter, Alarme, Intervall, Bericht und Auto-Kauf
-  **direkt im Browser konfigurieren** – Änderungen greifen sofort, ohne Neustart
-- **Watchlist** – beliebig viele Karten, globale Standardfilter, je Karte überschreibbar
-- **Filter**: Sprachen, Mindestzustand (MT…PO), Foil, signiert, altered, 1. Edition,
-  Verkäuferländer (Whitelist/Blacklist), Verkäufertyp (privat/gewerblich/Powerseller),
-  gesperrte Verkäufer, Mindestpreis (gegen Lockangebote)
-- **Alert-Regeln** (kombinierbar):
-  - Zielpreis – günstigstes passendes Angebot ≤ Zielpreis
-  - Preissturz um X % seit der letzten Prüfung
-  - X % unter Preistrend / 1-, 7-, 30-Tage-Schnitt / ab-Preis
-  - neues Allzeit-Tief in der eigenen Historie
-  - Wartezeit gegen Spam – fällt der Preis weiter, wird trotzdem sofort erneut gemeldet
-- **Benachrichtigungen**: Telegram, Discord, ntfy, E-Mail (SMTP), generischer Webhook
-  (Home Assistant, n8n, …), Konsole – pro Kanal wählbar, welche Ereignisse ankommen
-- **Bericht**: HTML (Darkmode, Verlaufsdiagramm, Kennzahlen 24 h / 7 T / 30 T, Allzeit-Tief,
-  günstigste Angebote, Alert-Historie) – täglich automatisch, optional als Anhang verschickt;
-  CSV-Export des Verlaufs, JSON-API für eigene Integrationen
-- **Auto-Kauf (experimentell)**: Probelauf oder „in den Warenkorb legen“ über die API, mit
-  Stückzahl-, Preis-, Lauf- und Monatsbudget-Grenzen
-- **Datenquellen**: offizielle Cardmarket-API, HTML-Scraper als Fallback, Demo-Modus
-- Docker-Image (amd64/arm64, z.B. Raspberry Pi), GitHub Actions CI
+</div>
 
-## Schnellstart
+Track the Magic, Pokémon, Yu-Gi-Oh! … cards you want, filter offers exactly the way you buy,
+get notified when a price drops below your target, and see everything in a web dashboard –
+running on your own server, NAS or Raspberry Pi.
 
-### Mit Docker (empfohlen)
+![Dashboard](docs/assets/screenshots/dashboard.png)
 
-```bash
-git clone https://github.com/mgummich/cardmarkettracker.git
-cd cardmarkettracker
-cp .env.example .env            # mindestens WEB_PASSWORD setzen!
-docker compose up -d --build
-```
+## Features
 
-Dann **http://localhost:8080** öffnen (Benutzer `admin`, Passwort aus `WEB_PASSWORD`) und
-Karten über „＋ Karte hinzufügen“ anlegen. Beim ersten Start wird `config/config.yaml`
-automatisch angelegt (Demo-Daten). Alternativ vorher die kommentierte Vorlage kopieren:
-`mkdir -p config && cp config.example.yaml config/config.yaml`.
+- **Web dashboard** – current low, 7-day sparkline, 24 h / 7 d change, distance to target,
+  interactive price charts per card
+- **Configure in the browser** – cards, filters, alerts, schedule, reports, auto-buy; changes
+  apply instantly and `config.yaml` keeps its comments and `${ENV}` placeholders
+- **Filters** – languages, minimum condition, foil / signed / altered / 1st edition, seller
+  countries, seller type, blocked sellers, minimum price
+- **Alerts** – target price, price drop, X % below trend / averages, all-time low, smart cooldown
+- **Notifications** – Telegram, Discord, ntfy, e-mail, webhook (Home Assistant, n8n, …)
+- **Reports** – daily HTML report, CSV export, JSON API
+- **Auto-buy (experimental)** – dry run or add to cart via the Cardmarket API, with budgets
+- **Data sources** – official Cardmarket API, HTML scraper fallback, demo mode
+- **Easy to run** – one Docker image for `amd64` and `arm64`, SQLite, no cloud account
 
-Einzelbefehle im Container: `docker compose exec tracker cmtracker check` (bzw. `report`,
-`validate`, `test-notify`, …). Logs: `docker compose logs -f`.
-
-> Die Ordner `config/` und `data/` müssen für den Container (UID 1000) beschreibbar sein:
-> `mkdir -p config data && sudo chown -R 1000:1000 config data`
-
-### Ohne Docker
-
-Python ≥ 3.11:
+## Quick start
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-cp config.example.yaml config.yaml
-cmtracker run             # Tracker + Weboberfläche auf http://127.0.0.1:8080
+mkdir cardmarket-tracker && cd cardmarket-tracker
+curl -LO https://raw.githubusercontent.com/mgummich/cardmarkettracker/main/docker-compose.yml
+curl -L -o .env https://raw.githubusercontent.com/mgummich/cardmarkettracker/main/.env.example
+mkdir -p config data && sudo chown -R 1000:1000 config data
+# set WEB_PASSWORD in .env, then:
+docker compose up -d
 ```
 
-Die Beispielkonfiguration nutzt den **Demo-Provider** mit simulierten Preisen – so kannst du
-Dashboard, Alerts, Berichte und Benachrichtigungen ohne Cardmarket-Zugang ausprobieren.
+Open **http://localhost:8080** (user `admin`) and add your first card. The starter
+configuration uses simulated demo data, so you can try everything before connecting the
+Cardmarket API.
 
-## Weboberfläche
+Without Docker: `pip install .` and `cmtracker run` – see the
+[installation guide](https://mgummich.github.io/cardmarkettracker/getting-started/installation/).
+
+## Documentation
+
+Full documentation in **English and German**: <https://mgummich.github.io/cardmarkettracker/>
 
 | | |
 |---|---|
-| ![Kartendetail](docs/card-detail.png) | ![Karte bearbeiten](docs/card-edit.png) |
+| [Installation](https://mgummich.github.io/cardmarkettracker/getting-started/installation/) | Docker, pip, systemd, updating |
+| [Configuration reference](https://mgummich.github.io/cardmarkettracker/configuration/reference/) | every option with defaults |
+| [Data sources](https://mgummich.github.io/cardmarkettracker/configuration/data-sources/) | Cardmarket API credentials, scraper, demo |
+| [Notifications](https://mgummich.github.io/cardmarkettracker/configuration/notifications/) | Telegram, Discord, ntfy, e-mail, webhook |
+| [Deployment](https://mgummich.github.io/cardmarkettracker/operations/deployment/) | reverse proxy, Raspberry Pi, backups |
 
-- **Dashboard** – alle Karten auf einen Blick, letzte Alerts und Käufe, „↻ Jetzt prüfen“
-- **Kartendetail** – Preisverlauf (7 T / 30 T / 90 T / 1 J / alles, Werte per Mouse-over),
-  Zielpreis-Linie, Kennzahlen, günstigste Angebote, Alerts, Käufe; pausieren, prüfen, bearbeiten
-- **Karte anlegen/bearbeiten** – alle Filter und Regeln; „Standard“ übernimmt die
-  Standardwerte, die grau als Platzhalter angezeigt werden
-- **Einstellungen** – Standardfilter und -alarme, Intervall, Datenquelle, Bericht, Auto-Kauf
-- **System** – Status des Hintergrunddienstes, Benachrichtigungskanäle (maskiert) mit
-  Testnachricht, Berichte erzeugen/ansehen, API-Links
-- **Aktivität** – alle Alerts und (simulierten) Käufe
+## Status
 
-So speichert die Oberfläche:
+The tracker, alerts, reports and web UI are tested and usable. The Cardmarket API and
+scraper integrations are tested against recorded responses; real-world feedback is very
+welcome. Auto-buy is **experimental**. The web interface and messages are currently German –
+an English UI is on the roadmap.
 
-- Änderungen werden in die `config.yaml` geschrieben – **Kommentare, Reihenfolge und
-  `${ENV}`-Platzhalter bleiben erhalten**. Vor dem Schreiben wird alles geprüft; bei Fehlern
-  bleibt die Datei unverändert. Die vorige Version liegt als `config.yaml.bak` daneben.
-- Felder, deren Wert aus einer Umgebungsvariable kommt, sind gesperrt (Badge `${ENV}`).
-- Geheimnisse (API-Tokens, Bot-Tokens, Passwörter) und Benachrichtigungskanäle werden bewusst
-  **nicht** im Browser bearbeitet, sondern in `config.yaml`/`.env`.
-- Auch Änderungen direkt an der Datei werden automatisch übernommen. Eine fehlerhafte Datei
-  wird gemeldet, und die letzte gültige Konfiguration läuft weiter.
+## Contributing
 
-**Sicherheit:** Mit `web.password` (z.B. `${WEB_PASSWORD}`) ist die Oberfläche per
-Benutzer/Passwort geschützt. Formulare akzeptieren nur Anfragen von der eigenen Seite
-(CSRF-Schutz). Ohne Docker lauscht sie standardmäßig nur auf `127.0.0.1`. Willst du sie aus
-dem Internet erreichen, setz ein Passwort und einen Reverse-Proxy mit HTTPS davor (Caddy,
-Traefik, nginx …).
+Bug reports, ideas and pull requests are welcome – in English or German. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md). Security issues: see [SECURITY.md](SECURITY.md).
 
-**JSON-API:** `GET /api/cards`, `GET /api/cards/<key>/history?days=30`, `GET /api/status`;
-Dokumentation unter `/api/docs`.
+## Disclaimer
 
-## Befehle
+Independent open source project, not affiliated with Cardmarket (Sammelkartenmarkt GmbH & Co. KG).
+Respect Cardmarket's terms of service and API limits. Use auto-buy at your own risk.
 
-| Befehl | Beschreibung |
-|---|---|
-| `cmtracker run [--no-web] [--host H] [--port P]` | Dauerbetrieb: Zeitplan, Tagesbericht und Weboberfläche |
-| `cmtracker web` | nur Weboberfläche (Prüfungen nur per Knopfdruck) |
-| `cmtracker check [--card KEY]` | einmalige Prüfung (aller oder einzelner Karten) |
-| `cmtracker report [--send]` | HTML-Bericht erzeugen (und Zusammenfassung verschicken) |
-| `cmtracker validate` | Konfiguration prüfen, effektive Filter/Regeln je Karte anzeigen |
-| `cmtracker test-notify` | Testnachricht an alle Kanäle |
-| `cmtracker history KEY [--days 30]` | Preisverlauf im Terminal |
-| `cmtracker export KEY -o datei.csv` | Verlauf als CSV |
-| `cmtracker purchases` | (simulierte) Käufe anzeigen |
-| `cmtracker serve [--port 8080]` | nur den Berichtsordner per HTTP ausliefern |
-
-Konfigurationsdatei: `-c pfad.yaml` oder Umgebungsvariable `CMTRACKER_CONFIG`.
-
-## Konfiguration
-
-Alles steht kommentiert in [`config.example.yaml`](config.example.yaml). Kurzfassung:
-
-```yaml
-provider:
-  type: mkm_api                # demo | mkm_api | scraper
-
-defaults:                      # gilt für alle Karten …
-  filters:
-    languages: [German, English]
-    min_condition: EX
-    foil: false
-  alerts:
-    drop_percent: 10
-    below_reference_percent: 15
-    reference: trend
-    cooldown_hours: 12
-
-cards:
-  - name: "The One Ring"
-    product_id: 710549         # für mkm_api
-    url: https://www.cardmarket.com/de/Magic/Products/Singles/...   # für scraper
-    filters:                   # … und wird hier je Karte überschrieben
-      languages: [German]
-    alerts:
-      max_price: 45
-    buy:
-      enabled: true
-      max_price: 40
-      quantity: 1
-
-notifications:
-  - type: telegram
-    bot_token: ${TELEGRAM_BOT_TOKEN}
-    chat_id: ${TELEGRAM_CHAT_ID}
-```
-
-- `${VAR}` / `${VAR:-standard}` wird durch Umgebungsvariablen ersetzt – Geheimnisse gehören
-  in die `.env`, nicht in die YAML.
-- Sprachen, Zustände und Länder verstehen deutsche und englische Schreibweisen
-  (`de`, `Deutsch`, `German`; `NM`, `near mint`; `DE`, `Deutschland`).
-- `null` bei einem Filter heißt „egal“ (z.B. `languages: null` überschreibt die Standard-Sprachen).
-- Dieselbe Karte mehrfach mit verschiedenen Filtern tracken: unterschiedliche `key` vergeben.
-- Ist ein Filter gesetzt und ein Angebotsattribut unbekannt, wird das Angebot **verworfen**
-  (lieber ein Alarm zu wenig als ein Fehlkauf).
-
-## Datenquellen
-
-### `mkm_api` – offizielle Cardmarket-API (empfohlen)
-
-Nutzt die [MKM API 2.0](https://api.cardmarket.com/ws/documentation) mit OAuth 1.0a.
-Du brauchst eine „Dedicated App“ samt Access-Token (Cardmarket-Account → Einstellungen → API).
-**Hinweis:** Cardmarket vergibt API-Zugänge nicht (mehr) an jeden Account – prüfe, ob dein
-Account Zugriff bekommt. Die Produkt-ID einer Karte liefert z.B. die API-Suche
-(`GET /products/find?search=...`).
-
-Pro Karte und Prüfung fallen 1 + ⌈Angebote/100⌉ Requests an. Achte auf das Tageslimit deines
-Zugangs (bei 20 Karten und stündlicher Prüfung ≈ 1.000 Requests/Tag).
-
-### `scraper` – öffentliche Produktseite
-
-Liest die Produktseite auf cardmarket.com (erste Seite, also die günstigsten ~50 Angebote).
-Cardmarket nutzt einen Bot-Schutz (Cloudflare), Abrufe können daher mit HTTP 403 scheitern,
-und Änderungen am HTML können den Parser brechen. Bitte großzügige Intervalle verwenden und die
-Nutzungsbedingungen von Cardmarket beachten. Filter werden als URL-Parameter mitgegeben und
-zusätzlich lokal angewandt.
-
-### `demo`
-
-Reproduzierbare Fake-Daten – zum Ausprobieren und Entwickeln.
-
-## Auto-Kauf (experimentell)
-
-Gekauft wird **nur**, wenn alles zutrifft:
-
-1. `purchasing.enabled: true` (global) **und** `buy.enabled: true` bei der Karte
-2. Angebot erfüllt die Karten- und die (optional strengeren) `buy.filters`
-3. Preis ≤ `buy.max_price` und gewünschte `buy.quantity` noch nicht erreicht
-4. Budget pro Lauf (`max_per_run`) und pro Kalendermonat (`max_per_month`) reicht
-
-| Modus | Verhalten |
-|---|---|
-| `dry_run` (Standard) | nichts wird gekauft – nur protokolliert und gemeldet |
-| `cart` | Artikel wird über die API in deinen Cardmarket-Warenkorb gelegt; **bezahlen musst du selbst** |
-
-Versandkosten werden aktuell nicht berücksichtigt. Teste neue Regeln immer erst im `dry_run`.
-
-## Entwicklung
-
-```bash
-pip install -e '.[dev]'
-pytest
-ruff check . && ruff format .
-```
-
-Aufbau (`src/cmtracker/`):
-
-| Modul | Aufgabe |
-|---|---|
-| `config.py` | YAML laden, `${ENV}`-Ersetzung, Validierung (pydantic), Defaults mergen |
-| `providers/` | Datenquellen: `mkm_api` (inkl. OAuth), `scraper`, `demo` |
-| `filters.py` | Angebotsfilter + Snapshot-Berechnung |
-| `alerts.py` | Alert-Regeln, Cooldown, Nachrichtentext |
-| `tracker.py` | Ablauf je Karte: abrufen → filtern → speichern → Alerts → Kauf |
-| `storage.py` | SQLite: Verlauf, gesendete Alerts, Käufe |
-| `notifiers/` | Telegram, Discord, ntfy, E-Mail, Webhook, Konsole |
-| `runtime.py` | Hintergrunddienst: Zeitplan, „Jetzt prüfen“, automatisches Neuladen der Konfiguration |
-| `web/` | Weboberfläche (FastAPI + Jinja2): Dashboard, Formulare, `config.yaml`-Speicher, JSON-API |
-| `reports/` | HTML-Bericht (Jinja2 + SVG-Diagramme), Text-Zusammenfassung, CSV |
-| `purchasing/` | Kaufplanung (Budget/Stückzahl) und Ausführung (Probelauf/Warenkorb) |
-| `app.py`, `cli.py` | Verdrahtung, Kommandozeile |
-
-Neue Datenquelle: `PriceProvider` aus `providers/base.py` implementieren und in
-`providers/__init__.py` registrieren. Neuer Kanal: `Notifier` aus `notifiers/base.py`.
-
-## Roadmap
-
-- [ ] Versandkosten je Verkäufer in Alerts und Kaufentscheidung einbeziehen
-- [ ] Warenkorb-Optimierung (mehrere Karten beim selben Verkäufer bündeln)
-- [ ] Vollautomatischer Checkout (sofern von der API unterstützt), mit Bestätigung per Telegram
-- [ ] Kartensuche per Name statt Produkt-ID (`cmtracker search`)
-- [x] Weboberfläche mit Dashboard und Konfiguration
-- [ ] Benachrichtigungskanäle in der Weboberfläche verwalten
-- [ ] Verkäuferbewertung als Filter
-
-## Haftungsausschluss
-
-Inoffizielles Projekt, nicht mit Cardmarket (Sammelkartenmarkt GmbH & Co. KG) verbunden.
-Nutzung auf eigene Verantwortung – insbesondere beim automatischen Kauf.
-
-## Lizenz
+## License
 
 [MIT](LICENSE)
