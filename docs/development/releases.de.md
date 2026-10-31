@@ -33,6 +33,10 @@ Images enthalten OCI-Labels, eine SBOM und Build-Provenance.
 
 4. Die Workflows Release und Docker veröffentlichen das GitHub-Release und das versionierte Image.
 
+Alternativ das Release in der GitHub-Oberfläche anlegen (*Releases → Draft a new release*,
+neuer Tag `v0.3.0` auf `main`). Der Release-Workflow hängt dann die Pakete an und übernimmt
+die Notizen aus dem Changelog.
+
 Versionierung nach [Semantic Versioning](https://semver.org); vor 1.0 können Minor-Versionen
 inkompatible Änderungen enthalten (im Changelog dokumentiert).
 

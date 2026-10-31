@@ -33,6 +33,10 @@ Images carry OCI labels, an SBOM and build provenance.
 
 4. The Release and Docker workflows publish the GitHub release and the versioned image.
 
+Alternatively create the release in the GitHub UI (*Releases → Draft a new release*, new tag
+`v0.3.0` on `main`). The Release workflow then attaches the packages and replaces the notes
+with the changelog section.
+
 Versioning follows [Semantic Versioning](https://semver.org); before 1.0, minor versions may
 contain breaking changes (documented in the changelog).
 

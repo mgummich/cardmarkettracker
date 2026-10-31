@@ -38,11 +38,19 @@ jobs:
       - run: pip install build twine
       - run: python -m build
       - run: twine check --strict dist/*
-      - name: Create GitHub release
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/* \
-            --title "Cardmarket Tracker ${VERSION}" \
-            --notes-file release-notes.md \
-            --verify-tag
+          # The release may already exist if it was created in the GitHub UI
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+            gh release edit "${GITHUB_REF_NAME}" \
+              --title "Cardmarket Tracker ${VERSION}" \
+              --notes-file release-notes.md
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --title "Cardmarket Tracker ${VERSION}" \
+              --notes-file release-notes.md \
+              --verify-tag
+          fi
